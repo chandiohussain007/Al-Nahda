@@ -1,0 +1,60 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsUrl,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+export class UpsertTeacherProfileDto {
+  @ApiProperty({ example: 'Sheikh Yusuf Ali' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  fullName: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/avatar.png' })
+  @IsOptional()
+  @IsUrl()
+  profilePictureUrl?: string;
+
+  @ApiPropertyOptional({ example: 'Ijazah holder in Quran recitation.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio?: string;
+
+  @ApiProperty({ type: [String], example: ['Ijazah in Hafs'] })
+  @IsArray()
+  @IsString({ each: true })
+  qualifications: string[];
+
+  @ApiProperty({ example: 8 })
+  @IsInt()
+  @Min(0)
+  @Max(80)
+  experienceYears: number;
+
+  @ApiProperty({ type: [String], example: ['LEARN_QURAN', 'LEARN_ARABIC'] })
+  @IsArray()
+  @IsString({ each: true })
+  subjectsTaught: string[];
+}
+
+export class SendTeacherNotificationDto {
+  @ApiProperty({ description: 'User id of the notification recipient' })
+  @IsUUID()
+  recipientId: string;
+
+  @ApiProperty({ example: 'Class moved to 6pm tomorrow.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  message: string;
+}

@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum Course {
+  LEARN_QURAN
+  LEARN_ARABIC
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+}
+
+enum TestStatus {
+  PASSED
+  DEMOTED_RECOMMENDED
+}
+
+enum TeacherStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  googleId  String   @unique
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  studentProfile StudentProfile?
+  teacherProfile TeacherProfile?
+  notifications  Notification[] @relation("NotificationRecipient")
+  sentNotifications Notification[] @relation("NotificationSender")
+}
+
+model StudentProfile {
+  id               String  @id @default(uuid())
+  userId           String  @unique
+  fullName         String
+  profilePictureUrl String?
+  whatsappNumber   String?
+  bio              String?
+
+  user           User          @relation(fields: [userId], references: [id])
+  enrollments    Enrollment[]
+  evaluationTests EvaluationTest[]
+}
+
+model TeacherProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  fullName         String
+  profilePictureUrl String?
+  bio              String?
+  qualifications   String[]
+  experienceYears  Int
+  subjectsTaught   String[]
+  teacherStatus    TeacherStatus @default(PENDING)
+
+  user       User        @relation(fields: [userId], references: [id])
+  enrollments Enrollment[]
+}
+
+model EvaluationQuestion {
+  id            String @id @default(uuid())
+  course        Course
+  level         Level
+  question      String
+  options       Json
+  correctAnswer String
+}
+
+model EvaluationTest {
+  id           String      @id @default(uuid())
+  studentId    String
+  claimedLevel Level
+  assignedLevel Level
+  score        Float
+  status       TestStatus
+  startedAt    DateTime    @default(now())
+  completedAt  DateTime?
+
+  student StudentProfile @relation(fields: [studentId], references: [id])
+  answers EvaluationAnswer[]
+}
+
+model EvaluationAnswer {
+  id         String @id @default(uuid())
+  testId     String
+  questionId String
+  answer     String
+  isCorrect  Boolean
+  points     Int
+
+  test EvaluationTest @relation(fields: [testId], references: [id])
+}
+
+model Enrollment {
+  id                String            @id @default(uuid())
+  studentId         String
+  teacherId         String
+  courseName        Course
+  confirmedLevel    Level
+  preferredTimeSlot String
+  status            EnrollmentStatus @default(PENDING)
+  createdAt         DateTime         @default(now())
+
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+  attendance Attendance[]
+}
+
+model Attendance {
+  id           String           @id @default(uuid())
+  enrollmentId String
+  date         DateTime
+  status       AttendanceStatus
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+
+  @@unique([enrollmentId, date])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  recipientId String
+  senderId    String?
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  recipient User  @relation("NotificationRecipient", fields: [recipientId], references: [id])
+  sender    User? @relation("NotificationSender", fields: [senderId], references: [id])
+}

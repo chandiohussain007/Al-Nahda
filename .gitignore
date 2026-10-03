@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+**/dist/
+**/build/
+**/.next/
+**/out/
+**/.turbo/
+
+# Test / coverage
+**/coverage/
+**/*.tsbuildinfo
+
+# Environment files — never commit real secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Secrets / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+**/secrets.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
