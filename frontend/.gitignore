@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Env — keep the example, drop the real values
+.env*.local
+.env.local
+.env.production
+
+# Logs
+*.log
