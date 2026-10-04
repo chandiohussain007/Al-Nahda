@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { TeacherStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SendTeacherNotificationDto, UpsertTeacherProfileDto } from './teachers.dto.js';
@@ -29,6 +30,27 @@ export class TeachersService {
       where: { userId },
       create: { userId, ...dto },
       update: { ...dto },
+    });
+  }
+
+  /**
+   * Directory of approved teachers used by students when creating an
+   * enrollment. Selects profile fields only, so user emails are never
+   * exposed to other accounts.
+   */
+  listApproved() {
+    return this.prisma.teacherProfile.findMany({
+      where: { teacherStatus: TeacherStatus.APPROVED },
+      select: {
+        id: true,
+        fullName: true,
+        profilePictureUrl: true,
+        bio: true,
+        qualifications: true,
+        experienceYears: true,
+        subjectsTaught: true,
+      },
+      orderBy: { fullName: 'asc' },
     });
   }
 
