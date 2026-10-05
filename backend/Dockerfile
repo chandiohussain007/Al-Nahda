@@ -39,5 +39,6 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 
-# Generate the client, apply committed migrations, then start the API.
-CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && node dist/main.js"]
+# Generate the client, apply committed migrations, seed questions (idempotent),
+# then start the API. Seeding must never block boot, so it is best-effort.
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && (node prisma/seed.mjs || echo 'seed skipped') && node dist/main.js"]
