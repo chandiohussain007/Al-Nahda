@@ -5,13 +5,14 @@ import RequireRole from '@/components/RequireRole';
 import {
   apiErrorMessage,
   apiStatus,
+  fetchAttendance,
   fetchMyEnrollments,
   fetchTeacherProfile,
   recordAttendance,
   saveTeacherProfile,
   sendTeacherNotification,
 } from '@/lib/api';
-import type { Enrollment, TeacherProfile } from '@/lib/types';
+import type { AttendanceRecord, Enrollment, TeacherProfile } from '@/lib/types';
 
 const SUBJECT_OPTIONS = [
   { value: 'LEARN_QURAN', label: 'Quran' },
@@ -107,6 +108,29 @@ function TeacherDashboard() {
   const [attendanceStatus, setAttendanceStatus] = useState<'PRESENT' | 'ABSENT' | 'EXCUSED'>(
     'PRESENT',
   );
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+
+  // Show what has already been recorded for the selected enrollment.
+  useEffect(() => {
+    if (!attendanceEnrollmentId) {
+      setAttendanceRecords([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchAttendance(attendanceEnrollmentId)
+      .then((rows) => {
+        if (!cancelled) setAttendanceRecords(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setAttendanceRecords([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [attendanceEnrollmentId]);
 
   // Notification form
   const [recipientId, setRecipientId] = useState('');
@@ -124,6 +148,7 @@ function TeacherDashboard() {
         status: attendanceStatus,
       });
       setNotice('Attendance recorded.');
+      setAttendanceRecords(await fetchAttendance(attendanceEnrollmentId));
     } catch (e) {
       setError(apiErrorMessage(e, 'Could not record attendance'));
     } finally {
@@ -346,6 +371,44 @@ function TeacherDashboard() {
             Record attendance
           </button>
           <p className="muted">Approved teachers only — the API enforces this.</p>
+
+          {attendanceEnrollmentId && (
+            <>
+              <h3 style={{ marginTop: 16 }}>Attendance history</h3>
+              {attendanceRecords.length === 0 ? (
+                <p className="muted">No records for this enrollment yet.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendanceRecords.map((record) => (
+                      <tr key={record.id}>
+                        <td>{new Date(record.date).toLocaleDateString()}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              record.status === 'PRESENT'
+                                ? 'ok'
+                                : record.status === 'ABSENT'
+                                  ? 'err'
+                                  : 'warn'
+                            }`}
+                          >
+                            {record.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
         </form>
 
         <form className="card" onSubmit={(e) => void submitNotification(e)}>

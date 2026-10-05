@@ -144,6 +144,8 @@ function StudentDashboard() {
         answers: questions.map((q) => ({ questionId: q.id, answer: answers[q.id] })),
       });
       setEvalResult(result);
+      // Preselect the awarded level so enrollment reuses the official result.
+      setEnrollLevel(result.assignedLevel);
       setNotice(`Evaluation submitted: ${result.score}% (${result.status}).`);
       setProgress(await fetchStudentProgress());
     } catch (e) {
@@ -167,6 +169,8 @@ function StudentDashboard() {
         courseName: enrollCourse,
         confirmedLevel: enrollLevel,
         preferredTimeSlot: timeSlot.trim(),
+        // The backend derives `confirmedLevel` from this test when supplied.
+        evaluationTestId: evalResult?.id,
       });
       setNotice('Enrollment request submitted — waiting for approval.');
       setTimeSlot('');
@@ -433,6 +437,11 @@ function StudentDashboard() {
                   </option>
                 ))}
               </select>
+              {evalResult && (
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Using evaluation result: {evalResult.assignedLevel} ({evalResult.score}%)
+                </p>
+              )}
             </div>
           </div>
 
