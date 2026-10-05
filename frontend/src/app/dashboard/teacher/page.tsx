@@ -11,6 +11,8 @@ import {
   recordAttendance,
   saveTeacherProfile,
   sendTeacherNotification,
+  teacherAcceptEnrollment,
+  teacherRejectEnrollment,
 } from '@/lib/api';
 import type { AttendanceRecord, Enrollment, TeacherProfile } from '@/lib/types';
 
@@ -172,6 +174,26 @@ function TeacherDashboard() {
     }
   };
 
+  const resolveEnrollment = async (id: string, action: 'accept' | 'reject') => {
+    setBusy(true);
+    setNotice(null);
+    setError(null);
+    try {
+      if (action === 'accept') {
+        await teacherAcceptEnrollment(id);
+        setNotice('Enrollment accepted — the student has been notified.');
+      } else {
+        await teacherRejectEnrollment(id);
+        setNotice('Enrollment rejected — the student has been notified.');
+      }
+      setEnrollments(await fetchMyEnrollments());
+    } catch (e) {
+      setError(apiErrorMessage(e, 'Could not update the enrollment'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <p className="muted">Loading…</p>;
 
   return (
@@ -282,6 +304,7 @@ function TeacherDashboard() {
               <th>Level</th>
               <th>Time slot</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -300,11 +323,35 @@ function TeacherDashboard() {
                     {e.status}
                   </span>
                 </td>
+                <td>
+                  {e.status === 'PENDING' ? (
+                    <div className="row">
+                      <button
+                        type="button"
+                        className="success"
+                        disabled={busy}
+                        onClick={() => void resolveEnrollment(e.id, 'accept')}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        disabled={busy}
+                        onClick={() => void resolveEnrollment(e.id, 'reject')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
               </tr>
             ))}
             {enrollments.length === 0 && (
               <tr>
-                <td colSpan={5} className="muted">
+                <td colSpan={6} className="muted">
                   No enrollments yet. Students appear here once they request a class.
                 </td>
               </tr>

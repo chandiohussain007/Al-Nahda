@@ -134,6 +134,13 @@ export const fetchMyEnrollments = () =>
 export const createEnrollment = (dto: CreateEnrollment) =>
   api.post<Enrollment>('/api/enrollment/create', dto).then((r) => r.data);
 
+// Teacher-side resolution of their own pending enrollment.
+export const teacherAcceptEnrollment = (id: string) =>
+  api.patch<Enrollment>(`/api/enrollment/${id}/accept`).then((r) => r.data);
+
+export const teacherRejectEnrollment = (id: string) =>
+  api.patch<Enrollment>(`/api/enrollment/${id}/reject`).then((r) => r.data);
+
 // --- attendance -------------------------------------------------------------
 export const fetchAttendance = (enrollmentId: string) =>
   api.get<AttendanceRecord[]>(`/api/attendance/${enrollmentId}`).then((r) => r.data);

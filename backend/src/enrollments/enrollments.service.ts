@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Level, UserRole } from '@prisma/client';
+import { EnrollmentStatus, Level, UserRole } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StudentsService } from '../students/students.service.js';
@@ -71,6 +71,50 @@ export class EnrollmentsService {
     });
 
     return enrollment;
+  }
+
+  /**
+   * Teacher-side resolution of their own enrollment request. Only the owning
+   * teacher may act, and only while the request is still PENDING — the admin
+   * endpoints stay available for any later status change.
+   */
+  async teacherResolve(userId: string, enrollmentId: string, accept: boolean) {
+    const teacher = await this.teachersService.getProfile(userId);
+
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { student: { select: { userId: true, fullName: true } } },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Enrollment not found');
+    }
+
+    if (enrollment.teacherId !== teacher.id) {
+      throw new ForbiddenException('You can only manage your own enrollments');
+    }
+
+    if (enrollment.status !== EnrollmentStatus.PENDING) {
+      throw new BadRequestException(`Enrollment is already ${enrollment.status}`);
+    }
+
+    const status = accept ? EnrollmentStatus.ACTIVE : EnrollmentStatus.CANCELLED;
+
+    const updated = await this.prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { status },
+      include: { student: true, teacher: true },
+    });
+
+    await this.notificationsService.create({
+      recipientId: enrollment.student.userId,
+      senderId: teacher.userId,
+      message: accept
+        ? `Your enrollment for ${enrollment.courseName} was accepted. Classes are at ${enrollment.preferredTimeSlot}.`
+        : `Your enrollment request for ${enrollment.courseName} was declined.`,
+    });
+
+    return updated;
   }
 
   async list(userId: string, role: UserRole) {

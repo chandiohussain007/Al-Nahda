@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
@@ -28,6 +37,24 @@ export class EnrollmentsController {
   @ApiOperation({ summary: 'List enrollments for the authenticated student or teacher' })
   list(@CurrentUser() user: AuthenticatedUser) {
     return this.enrollmentsService.list(user.sub, user.role);
+  }
+
+  @Patch(':id/accept')
+  @ApiOperation({ summary: 'Teacher accepts their own pending enrollment' })
+  accept(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.enrollmentsService.teacherResolve(user.sub, id, true);
+  }
+
+  @Patch(':id/reject')
+  @ApiOperation({ summary: 'Teacher declines their own pending enrollment' })
+  reject(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.enrollmentsService.teacherResolve(user.sub, id, false);
   }
 
   @Get(':id')

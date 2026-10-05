@@ -9,7 +9,7 @@ import { EnrollmentsService } from './enrollments.service.js';
 const prismaMock = {
   teacherProfile: { findUnique: vi.fn() },
   evaluationTest: { findUnique: vi.fn() },
-  enrollment: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
+  enrollment: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
 };
 
 const studentsServiceMock = { getProfile: vi.fn() };
@@ -69,6 +69,90 @@ describe('EnrollmentsService', () => {
 
     await expect(service.getById('user-1', UserRole.STUDENT, 'enr-1')).rejects.toThrow(
       'You do not have access to this enrollment',
+    );
+  });
+
+  it('lets the owning teacher accept a pending enrollment and notifies the student', async () => {
+    teachersServiceMock.getProfile.mockResolvedValue({ id: 'teacher-1', userId: 'user-2' });
+    prismaMock.enrollment.findUnique.mockResolvedValue({
+      id: 'enr-1',
+      teacherId: 'teacher-1',
+      status: 'PENDING',
+      courseName: 'LEARN_QURAN',
+      preferredTimeSlot: 'Mon/Wed 18:00',
+      student: { userId: 'user-1', fullName: 'Aisha' },
+    });
+    prismaMock.enrollment.update.mockResolvedValue({ id: 'enr-1', status: 'ACTIVE' });
+
+    const result = await service.teacherResolve('user-2', 'enr-1', true);
+
+    expect(prismaMock.enrollment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'enr-1' },
+        data: { status: 'ACTIVE' },
+      }),
+    );
+    expect(notificationsServiceMock.create).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: 'user-1', senderId: 'user-2' }),
+    );
+    expect(result.status).toBe('ACTIVE');
+  });
+
+  it('lets the owning teacher reject a pending enrollment', async () => {
+    teachersServiceMock.getProfile.mockResolvedValue({ id: 'teacher-1', userId: 'user-2' });
+    prismaMock.enrollment.findUnique.mockResolvedValue({
+      id: 'enr-1',
+      teacherId: 'teacher-1',
+      status: 'PENDING',
+      courseName: 'LEARN_ARABIC',
+      preferredTimeSlot: 'Sat 10:00',
+      student: { userId: 'user-1', fullName: 'Aisha' },
+    });
+    prismaMock.enrollment.update.mockResolvedValue({ id: 'enr-1', status: 'CANCELLED' });
+
+    await service.teacherResolve('user-2', 'enr-1', false);
+
+    expect(prismaMock.enrollment.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: 'CANCELLED' } }),
+    );
+  });
+
+  it('refuses when the teacher does not own the enrollment', async () => {
+    teachersServiceMock.getProfile.mockResolvedValue({ id: 'teacher-1', userId: 'user-2' });
+    prismaMock.enrollment.findUnique.mockResolvedValue({
+      id: 'enr-1',
+      teacherId: 'someone-else',
+      status: 'PENDING',
+      student: { userId: 'user-1' },
+    });
+
+    await expect(service.teacherResolve('user-2', 'enr-1', true)).rejects.toThrow(
+      'You can only manage your own enrollments',
+    );
+    expect(prismaMock.enrollment.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses to act on an enrollment that is no longer pending', async () => {
+    teachersServiceMock.getProfile.mockResolvedValue({ id: 'teacher-1', userId: 'user-2' });
+    prismaMock.enrollment.findUnique.mockResolvedValue({
+      id: 'enr-1',
+      teacherId: 'teacher-1',
+      status: 'ACTIVE',
+      student: { userId: 'user-1' },
+    });
+
+    await expect(service.teacherResolve('user-2', 'enr-1', true)).rejects.toThrow(
+      'Enrollment is already ACTIVE',
+    );
+    expect(prismaMock.enrollment.update).not.toHaveBeenCalled();
+  });
+
+  it('404s when the enrollment does not exist', async () => {
+    teachersServiceMock.getProfile.mockResolvedValue({ id: 'teacher-1', userId: 'user-2' });
+    prismaMock.enrollment.findUnique.mockResolvedValue(null);
+
+    await expect(service.teacherResolve('user-2', 'missing', true)).rejects.toThrow(
+      'Enrollment not found',
     );
   });
 });
