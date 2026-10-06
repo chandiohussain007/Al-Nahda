@@ -1,4 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
+import * as Sentry from '@sentry/nestjs';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -17,8 +19,14 @@ function resolveCorsOrigins(): boolean | string[] {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Render/Koyeb terminate TLS in front of the container.
-  app.set('trust proxy', 1);
+  // Cloudflare + Render terminate TLS in front of the container. Trust every
+  // hop so req.ip comes from the leftmost X-Forwarded-For entry (the real
+  // caller) instead of collapsing to one load-balancer IP, which keeps
+  // per-user rate limiting meaningful.
+  app.set('trust proxy', true);
+
+  // Security headers: CSP, X-Frame-Options, HSTS, referrer policy, etc.
+  app.use(helmet());
 
   app.enableCors({
     origin: resolveCorsOrigins(),
@@ -33,6 +41,17 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // Error tracking. Requires SENTRY_DSN. Guarded so local and preview runs
+  // work unchanged; nothing is initialized without a DSN.
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV ?? 'development',
+      // Low sample rate keeps the free tier affordable.
+      tracesSampleRate: 0.1,
+    });
+  }
 
   const config = new DocumentBuilder()
     .setTitle('Al Nahda API')

@@ -1,3 +1,4 @@
+import { Throttle } from '@nestjs/throttler';
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
@@ -9,6 +10,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('google')
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify a Google ID token and issue an internal JWT' })
   @ApiResponse({ status: 200, description: 'Google identity verified and token issued' })

@@ -1,12 +1,16 @@
 services:
   - type: web
-    name: al-nahda-backend
+    # Must match the service created in Render (currently
+    # `al-nahda-backend-6hrb`). If you convert a manually-created service to a
+    # blueprint, rename this first (or use Render's "Convert to Blueprint").
+    name: al-nahda-backend-6hrb
     runtime: docker
     plan: free
     region: oregon
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
+    # Enabled: every push to main rebuilds and redeploys automatically.
     autoDeploy: true
     envVars:
       - key: NODE_ENV
@@ -14,7 +18,9 @@ services:
       - key: PORT
         value: 3000
       - key: DATABASE_URL
-        sync: false
+        # Linked Supabase database; Render syncs the connection string
+        # automatically, so the service picks it up without manual entry.
+        sync: true
       - key: JWT_SECRET
         generateValue: true
       - key: GOOGLE_CLIENT_ID
@@ -26,4 +32,8 @@ services:
       - key: ADMIN_EMAILS
         sync: false
       - key: CORS_ORIGINS
+        sync: false
+      - key: SENTRY_DSN
+        # Optional — error tracking (https://sentry.io). Leave empty to skip
+        # error tracking in production.
         sync: false

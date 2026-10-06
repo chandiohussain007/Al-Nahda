@@ -62,5 +62,22 @@ The API runs on `http://localhost:3000` and Swagger UI is available at
 - **Database**: PostgreSQL on Supabase (set `DATABASE_URL`)
 - **CI**: GitHub Actions (`.github/workflows/ci.yml`)
 
-Deploy by pointing Render at this repository — `render.yaml` defines the
-`al-nahda-backend` web service with the required environment variables.
+The API is shipped as a Render **blueprint** (`render.yaml`). `autoDeploy: true`
+is set, so every push to `main` rebuilds and redeploys the service — no manual
+redeploy clicks needed.
+
+### First deploy
+
+1. Create the project in Render (free tier, Docker, Oregon). Render will pick up
+   `render.yaml` automatically.
+2. Attach the **Supabase PostgreSQL database** to the service. `DATABASE_URL` is
+   `sync: true`, so Render fills it in for you.
+3. Go to **Settings → Deploy** and confirm **Auto-Deploy = On** (the service was
+   created from a manual form, so the toggle has to be switched on — the
+   `render.yaml` above declares it).
+4. Optional: add a `SENTRY_DSN` config var to enable error tracking.
+
+To move a manually-created service onto this blueprint, use Render's
+**"Convert to Blueprint"** in the service's Deploy settings — it rewrites the
+service to match `render.yaml` (service name, env vars, auto-deploy).
+

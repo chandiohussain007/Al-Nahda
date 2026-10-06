@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AdminModule } from './admin/admin.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -22,6 +24,14 @@ import { UsersModule } from './users/users.module.js';
       envFilePath: ['.env.local', '.env'],
       validate: validateEnv,
     }),
+    ThrottlerModule.forRoot([
+      {
+        // One request per second averaged over the window, generous enough for
+        // a normal user browsing the dashboard, tight enough to blunt scrapers.
+        ttl: 60_000,
+        limit: 600,
+      },
+    ]),
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -35,6 +45,12 @@ import { UsersModule } from './users/users.module.js';
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
