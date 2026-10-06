@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import RequireRole from '@/components/RequireRole';
+import StatusBadge from '@/components/StatusBadge';
+import Link from 'next/link';
 import {
   apiErrorMessage,
   approveEnrollment,
@@ -258,6 +260,7 @@ function AdminDashboard() {
               <th>Name</th>
               <th>Email</th>
               <th>Joined</th>
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
@@ -266,11 +269,14 @@ function AdminDashboard() {
                 <td>{s.fullName}</td>
                 <td>{s.user?.email ?? '—'}</td>
                 <td className="muted">{new Date(s.user?.createdAt ?? '').toLocaleDateString()}</td>
+                <td>
+                  <Link href={`/dashboard/admin/students/${s.id}`}>View</Link>
+                </td>
               </tr>
             ))}
             {!loading && students.length === 0 && (
               <tr>
-                <td colSpan={3} className="muted">
+                <td colSpan={4} className="muted">
                   No students yet.
                 </td>
               </tr>
@@ -280,19 +286,4 @@ function AdminDashboard() {
       </div>
     </>
   );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return <span className="badge">—</span>;
-
-  const tone =
-    status === 'APPROVED' || status === 'ACTIVE'
-      ? 'ok'
-      : status === 'PENDING'
-        ? 'warn'
-        : status === 'REJECTED' || status === 'CANCELLED'
-          ? 'err'
-          : '';
-
-  return <span className={`badge ${tone}`}>{status}</span>;
 }

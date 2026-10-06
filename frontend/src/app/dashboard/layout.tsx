@@ -49,6 +49,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Link href="/dashboard/notifications" className={onNotifications ? 'active' : undefined}>
           Notifications
         </Link>
+        {session.user.role === 'STUDENT' && (
+          <Link
+            href="/dashboard/student/enrollments"
+            className={pathname.startsWith('/dashboard/student/enrollments') ? 'active' : undefined}
+          >
+            Enrollments
+          </Link>
+        )}
         <span className="spacer" />
         <span className="muted">
           {session.user.email} · <span className="badge">{session.user.role}</span>

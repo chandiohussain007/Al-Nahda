@@ -194,3 +194,9 @@ export interface SubmitEvaluation {
   claimedLevel: Level;
   answers: Array<{ questionId: string; answer: string }>;
 }
+
+/** Richer payload from GET /api/admin/students/:id. */
+export interface AdminStudentDetail extends StudentProfile {
+  enrollments: Enrollment[];
+  evaluationTests: EvaluationTest[];
+}

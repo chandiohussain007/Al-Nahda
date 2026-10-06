@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { clearSession, readSession } from './session';
 import type {
+  AdminStudentDetail,
   AttendanceRecord,
   CreateEnrollment,
   DirectoryTeacher,
@@ -99,6 +100,9 @@ export const rejectTeacher = (id: string) =>
 export const fetchAdminStudents = () =>
   api.get<StudentProfile[]>('/api/admin/students').then((r) => r.data);
 
+export const fetchAdminStudent = (id: string) =>
+  api.get<AdminStudentDetail>(`/api/admin/students/${id}`).then((r) => r.data);
+
 export const fetchAdminEnrollments = (status?: EnrollmentStatus) =>
   api
     .get<Enrollment[]>('/api/admin/enrollments', { params: status ? { status } : {} })
@@ -143,6 +147,10 @@ export const teacherAcceptEnrollment = (id: string) =>
 
 export const teacherRejectEnrollment = (id: string) =>
   api.patch<Enrollment>(`/api/enrollment/${id}/reject`).then((r) => r.data);
+
+/** Single enrollment with its attendance history (ownership enforced server-side). */
+export const fetchEnrollment = (id: string) =>
+  api.get<Enrollment>(`/api/enrollment/${id}`).then((r) => r.data);
 
 // --- attendance -------------------------------------------------------------
 export const fetchAttendance = (enrollmentId: string) =>
