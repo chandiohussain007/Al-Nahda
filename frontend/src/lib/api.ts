@@ -37,18 +37,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Expired/invalid token: drop the session and return to the login screen.
+// Expired/invalid token: drop the session, and return to the login screen
+// unless we are already there (so the form can still show the error).
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
-      typeof window !== 'undefined' &&
-      !window.location.pathname.startsWith('/login')
+      typeof window !== 'undefined'
     ) {
       clearSession();
-      window.location.assign('/login');
+
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login');
+      }
     }
     return Promise.reject(error);
   },
