@@ -57,6 +57,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Enrollments
           </Link>
         )}
+        {session.user.role === 'STUDENT' && (
+          <Link
+            href="/dashboard/student/courses"
+            className={pathname.startsWith('/dashboard/student/courses') ? 'active' : undefined}
+          >
+            Courses
+          </Link>
+        )}
+        {session.user.role === 'ADMIN' && (
+          <>
+            <Link
+              href="/dashboard/admin/questions"
+              className={pathname.startsWith('/dashboard/admin/questions') ? 'active' : undefined}
+            >
+              Questions
+            </Link>
+            <Link
+              href="/dashboard/admin/assessments"
+              className={pathname.startsWith('/dashboard/admin/assessments') ? 'active' : undefined}
+            >
+              Assessments
+            </Link>
+            <Link
+              href="/dashboard/admin/enrollments"
+              className={pathname.startsWith('/dashboard/admin/enrollments') ? 'active' : undefined}
+            >
+              Enrollments
+            </Link>
+          </>
+        )}
         <span className="spacer" />
         <span className="muted">
           {session.user.email} · <span className="badge">{session.user.role}</span>

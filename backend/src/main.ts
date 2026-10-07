@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
+import { maxUploadSize } from './common/max-upload.middleware.js';
 
 function resolveCorsOrigins(): boolean | string[] {
   const configured = (process.env.CORS_ORIGINS ?? '')
@@ -27,6 +28,10 @@ async function bootstrap() {
 
   // Security headers: CSP, X-Frame-Options, HSTS, referrer policy, etc.
   app.use(helmet());
+
+  // Reject multipart uploads over 1MB (media is URL-based today; this binds
+  // any file-upload route added later).
+  app.use(maxUploadSize);
 
   app.enableCors({
     origin: resolveCorsOrigins(),

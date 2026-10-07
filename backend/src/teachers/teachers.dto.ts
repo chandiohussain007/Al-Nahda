@@ -5,10 +5,11 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   IsUrl,
+  IsUUID,
   Max,
   MaxLength,
+  Matches,
   Min,
 } from 'class-validator';
 
@@ -45,6 +46,21 @@ export class UpsertTeacherProfileDto {
   @IsArray()
   @IsString({ each: true })
   subjectsTaught: string[];
+
+  @ApiPropertyOptional({
+    description: 'Contact phone; returned to ADMIN and the owner only',
+    example: '+92 300 1234567',
+  })
+  @IsOptional()
+  @Matches(/^\+?[0-9 ()-]{7,20}$/, {
+    message: 'phoneNumber must be 7-20 digits with optional +, spaces, parentheses or dashes',
+  })
+  phoneNumber?: string | null;
+
+  @ApiPropertyOptional({ description: 'Direct web link to the CV', example: 'https://example.com/cv.pdf' })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  cvUrl?: string | null;
 }
 
 export class SendTeacherNotificationDto {

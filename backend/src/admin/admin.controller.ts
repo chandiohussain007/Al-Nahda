@@ -1,10 +1,26 @@
-import { Controller, Get, Param, ParseUUIDPipe, Patch, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { EnrollmentStatus, TeacherStatus, UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
-import { ListEnrollmentsQueryDto, ListTeachersQueryDto } from './admin.dto.js';
+import {
+  ListEnrollmentsQueryDto,
+  ListTeachersQueryDto,
+  ResolveFeeDto,
+  SetCvDto,
+  SetProfilePictureDto,
+} from './admin.dto.js';
 import { AdminService } from './admin.service.js';
 
 @ApiTags('Admin')
@@ -61,5 +77,41 @@ export class AdminController {
   @ApiOperation({ summary: 'Cancel an enrollment request' })
   rejectEnrollment(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.setEnrollmentStatus(id, EnrollmentStatus.CANCELLED);
+  }
+
+  @Patch('enrollments/:id/fee/approve')
+  @ApiOperation({ summary: 'Agree the fee on an enrollment (defaults to the proposed amount)' })
+  approveEnrollmentFee(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ResolveFeeDto) {
+    return this.adminService.resolveEnrollmentFee(id, dto);
+  }
+
+  @Patch('enrollments/:id/fee/reject')
+  @ApiOperation({ summary: 'Reject the proposed fee on an enrollment' })
+  rejectEnrollmentFee(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.rejectEnrollmentFee(id);
+  }
+
+  @Patch('users/:id/profile-picture')
+  @ApiOperation({ summary: 'Overwrite a profile picture by direct web link' })
+  setProfilePicture(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SetProfilePictureDto) {
+    return this.adminService.setProfilePicture(id, dto.profilePictureUrl);
+  }
+
+  @Delete('users/:id/profile-picture')
+  @ApiOperation({ summary: 'Clear a profile picture' })
+  clearProfilePicture(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.clearProfilePicture(id);
+  }
+
+  @Patch('users/:id/cv')
+  @ApiOperation({ summary: "Set a teacher's CV link by direct web link" })
+  setCv(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SetCvDto) {
+    return this.adminService.setCv(id, dto.cvUrl);
+  }
+
+  @Delete('users/:id/cv')
+  @ApiOperation({ summary: "Clear a teacher's CV link" })
+  clearCv(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.clearCv(id);
   }
 }

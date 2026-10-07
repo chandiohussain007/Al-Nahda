@@ -43,6 +43,8 @@ function TeacherDashboard() {
   const [qualifications, setQualifications] = useState('');
   const [experienceYears, setExperienceYears] = useState('0');
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [cvUrl, setCvUrl] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +57,8 @@ function TeacherDashboard() {
       setQualifications(existing.qualifications.join(', '));
       setExperienceYears(String(existing.experienceYears));
       setSubjects(existing.subjectsTaught);
+      setPhoneNumber(existing.phoneNumber ?? '');
+      setCvUrl(existing.cvUrl ?? '');
       setEnrollments(await fetchMyEnrollments());
     } catch (e) {
       // 404 = no profile created yet, a normal first-login state.
@@ -89,6 +93,8 @@ function TeacherDashboard() {
           .filter(Boolean),
         experienceYears: Number(experienceYears) || 0,
         subjectsTaught: subjects,
+        phoneNumber: phoneNumber.trim() || null,
+        cvUrl: cvUrl.trim() || null,
       });
       setProfile(saved);
       setNotice(
@@ -280,6 +286,27 @@ function TeacherDashboard() {
               rows={3}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="field-row">
+          <div>
+            <label htmlFor="phoneNumber">Phone (only admins can see it)</label>
+            <input
+              id="phoneNumber"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+92 300 1234567"
+            />
+          </div>
+          <div>
+            <label htmlFor="cvUrl">CV / certificate link</label>
+            <input
+              id="cvUrl"
+              value={cvUrl}
+              onChange={(e) => setCvUrl(e.target.value)}
+              placeholder="https://example.com/cv.pdf"
             />
           </div>
         </div>

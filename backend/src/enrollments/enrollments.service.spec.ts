@@ -155,4 +155,41 @@ describe('EnrollmentsService', () => {
       'Enrollment not found',
     );
   });
+
+  it('strips the teacher phone number from a student-facing enrollment', async () => {
+    prismaMock.enrollment.findUnique.mockResolvedValue({
+      id: 'enr-1',
+      student: { userId: 'user-1' },
+      teacher: {
+        id: 'tp-1',
+        userId: 'teacher-user',
+        fullName: 'Sheikh Yusuf',
+        phoneNumber: '+92 300 1234567',
+      },
+      attendance: [],
+    });
+
+    const result = await service.getById('user-1', UserRole.STUDENT, 'enr-1');
+
+    expect(result.teacher).not.toHaveProperty('phoneNumber');
+    expect(result.teacher).toHaveProperty('fullName', 'Sheikh Yusuf');
+  });
+
+  it('keeps the phone number for the owning teacher', async () => {
+    prismaMock.enrollment.findUnique.mockResolvedValue({
+      id: 'enr-1',
+      student: { userId: 'someone-else' },
+      teacher: {
+        id: 'tp-1',
+        userId: 'user-1',
+        fullName: 'Sheikh Yusuf',
+        phoneNumber: '+92 300 1234567',
+      },
+      attendance: [],
+    });
+
+    const result = await service.getById('user-1', UserRole.TEACHER, 'enr-1');
+
+    expect(result.teacher).toHaveProperty('phoneNumber', '+92 300 1234567');
+  });
 });

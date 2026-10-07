@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import RequireRole from '@/components/RequireRole';
@@ -172,7 +172,7 @@ function StudentDashboard() {
         // The backend derives `confirmedLevel` from this test when supplied.
         evaluationTestId: evalResult?.id,
       });
-      setNotice('Enrollment request submitted — waiting for approval.');
+      setNotice('Enrollment request submitted ΓÇö waiting for approval.');
       setTimeSlot('');
       setProgress(await fetchStudentProgress());
     } catch (e) {
@@ -182,7 +182,7 @@ function StudentDashboard() {
     }
   };
 
-  if (loading) return <p className="muted">Loading…</p>;
+  if (loading) return <p className="muted">LoadingΓÇª</p>;
 
   return (
     <>
@@ -258,7 +258,7 @@ function StudentDashboard() {
               </div>
 
               <p className="muted">
-                Present {progress.attendance.PRESENT} · Absent {progress.attendance.ABSENT} ·
+                Present {progress.attendance.PRESENT} ┬╖ Absent {progress.attendance.ABSENT} ┬╖
                 Excused {progress.attendance.EXCUSED}
               </p>
 
@@ -338,7 +338,7 @@ function StudentDashboard() {
           {questions.length > 0 && (
             <>
               <p className="muted">
-                {questions.length} question{questions.length === 1 ? '' : 's'} · answer all to
+                {questions.length} question{questions.length === 1 ? '' : 's'} ┬╖ answer all to
                 submit
               </p>
 
@@ -380,7 +380,7 @@ function StudentDashboard() {
 
           {evalResult && (
             <div className="notice" style={{ marginTop: 12 }}>
-              Score {evalResult.score}% → assigned <strong>{evalResult.assignedLevel}</strong> (
+              Score {evalResult.score}% ΓåÆ assigned <strong>{evalResult.assignedLevel}</strong> (
               {evalResult.status})
             </div>
           )}
@@ -399,11 +399,11 @@ function StudentDashboard() {
                 disabled={directory.length === 0}
               >
                 <option value="">
-                  {directory.length === 0 ? 'No approved teachers yet' : 'Select…'}
+                  {directory.length === 0 ? 'No approved teachers yet' : 'SelectΓÇª'}
                 </option>
                 {directory.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.fullName} — {t.subjectsTaught.join(', ') || 'general'}
+                    {t.fullName} ΓÇö {t.subjectsTaught.join(', ') || 'general'}
                   </option>
                 ))}
               </select>
@@ -471,7 +471,7 @@ function StudentDashboard() {
   );
 }
 
-/** The API stores `options` as JSON — accept an array or an object map. */
+/** The API stores `options` as JSON ΓÇö accept an array or an object map. */
 function optionList(options: unknown): string[] {
   if (Array.isArray(options)) return options.map((option) => String(option));
   if (options && typeof options === 'object') {

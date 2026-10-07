@@ -7,6 +7,7 @@ export type EnrollmentStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'EXCUSED';
 export type TeacherStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type TestStatus = 'PASSED' | 'DEMOTED_RECOMMENDED';
+export type FeeStatus = 'NONE' | 'PROPOSED' | 'AGREED' | 'REJECTED';
 
 export const COURSES: Course[] = ['LEARN_QURAN', 'LEARN_ARABIC'];
 export const LEVELS: Level[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
@@ -58,6 +59,9 @@ export interface TeacherProfile extends DirectoryTeacher {
   userId?: string;
   teacherStatus?: TeacherStatus;
   user?: UserSummary;
+  /** Contact phone - only returned to ADMIN and to the owning teacher. */
+  phoneNumber?: string | null;
+  cvUrl?: string | null;
 }
 
 export interface StudentProfile {
@@ -98,6 +102,9 @@ export interface Enrollment {
   confirmedLevel: Level;
   preferredTimeSlot: string;
   status: EnrollmentStatus;
+  proposedFee: number | null;
+  agreedFee: number | null;
+  feeStatus: FeeStatus;
   createdAt: string;
   student?: EnrollmentStudent;
   teacher?: EnrollmentTeacher;
@@ -179,6 +186,8 @@ export interface UpsertTeacherProfile {
   qualifications: string[];
   experienceYears: number;
   subjectsTaught: string[];
+  phoneNumber?: string | null;
+  cvUrl?: string | null;
 }
 
 export interface CreateEnrollment {
@@ -187,6 +196,7 @@ export interface CreateEnrollment {
   preferredTimeSlot: string;
   evaluationTestId?: string;
   confirmedLevel?: Level;
+  proposedFee?: number;
 }
 
 export interface SubmitEvaluation {
@@ -200,3 +210,139 @@ export interface AdminStudentDetail extends StudentProfile {
   enrollments: Enrollment[];
   evaluationTests: EvaluationTest[];
 }
+
+// ─── Assessment Module Types ───────────────────────────────────────────────
+
+export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type AssessmentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type StudentEnrollmentStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'ASSESSMENT_REQUIRED'
+  | 'ASSESSMENT_COMPLETED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ACTIVE'
+  | 'COMPLETED';
+export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED' | 'CANCELLED';
+export type QuestionType = 'MULTIPLE_CHOICE';
+export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
+
+export interface CourseItem {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  status: CourseStatus;
+  standardFee: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LevelContent {
+  id: string;
+  courseId: string;
+  name: string;
+  sortOrder: number;
+  description: string | null;
+}
+
+export interface QuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  type: QuestionType;
+  difficulty: Difficulty;
+  course: Course;
+  level: Level;
+  options: QuestionOption[];
+  correctOptionId: string;
+  points: number;
+  explanation: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+/** Question as served to a student during an attempt — no correct answer. */
+export interface ExamQuestion {
+  id: string;
+  text: string;
+  type: QuestionType;
+  options: QuestionOption[];
+  points: number;
+  difficulty: Difficulty;
+}
+
+export interface Assessment {
+  id: string;
+  courseId: string;
+  levelId: string | null;
+  title: string;
+  description: string | null;
+  durationMinutes: number;
+  passPercentage: number;
+  attemptsAllowed: number;
+  questionsPerAttempt: number;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+  showResultAfterSubmit: boolean;
+  status: AssessmentStatus;
+  createdAt: string;
+  course?: Pick<CourseItem, 'id' | 'name' | 'slug'>;
+  level?: Pick<LevelContent, 'id' | 'name'> | null;
+  _count?: { questions: number; attempts: number };
+}
+
+export interface StudentEnrollmentRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  selectedLevelId: string | null;
+  assignedAssessmentId: string | null;
+  status: StudentEnrollmentStatus;
+  applicationData: string | null;
+  proposedFee: number | null;
+  agreedFee: number | null;
+  feeStatus: FeeStatus;
+  createdAt: string;
+  updatedAt: string;
+  course?: Pick<CourseItem, 'id' | 'name' | 'slug'>;
+  selectedLevel?: Pick<LevelContent, 'id' | 'name'> | null;
+  assignedAssessment?: Pick<Assessment, 'id' | 'title' | 'durationMinutes'> | null;
+  student?: { id: string; email: string };
+}
+
+export interface AttemptResult {
+  attemptId: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  passed: boolean;
+  passPercentage: number;
+}
+
+export interface StartAttemptResponse {
+  attemptId: string;
+  durationMinutes: number;
+  questions: ExamQuestion[];
+}
+
+export interface Attempt {
+  id: string;
+  studentId: string;
+  assessmentId: string;
+  enrollmentId: string | null;
+  status: AttemptStatus;
+  score: number | null;
+  percentage: number | null;
+  passed: boolean | null;
+  timeSpentSeconds: number | null;
+  startedAt: string;
+  submittedAt: string | null;
+  assessment?: Pick<Assessment, 'id' | 'title' | 'passPercentage'>;
+}
+

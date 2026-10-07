@@ -1,7 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { EnrollmentStatus, TeacherStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { EnrollmentStatus, FeeStatus, TeacherStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ResolveFeeDto } from './admin.dto.js';
 
 const USER_SUMMARY_SELECT = {
   id: true,
@@ -105,6 +111,121 @@ export class AdminService {
     });
 
     return updated;
+  }
+
+  /** Admin: agree the fee on an original (teacher) enrollment. */
+  async resolveEnrollmentFee(enrollmentId: string, dto: ResolveFeeDto) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { student: { select: { userId: true } } },
+    });
+
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+    if (enrollment.feeStatus !== FeeStatus.PROPOSED) {
+      throw new ConflictException(
+        `Fee decision already made (status: ${enrollment.feeStatus})`,
+      );
+    }
+
+    const agreedFee = dto.agreedFee ?? enrollment.proposedFee;
+    if (agreedFee === null || agreedFee === undefined) {
+      throw new BadRequestException('No proposed fee to agree on');
+    }
+
+    const updated = await this.prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { agreedFee, feeStatus: FeeStatus.AGREED },
+    });
+
+    await this.notificationsService.create({
+      recipientId: enrollment.student.userId,
+      message: `Your fee of ${agreedFee} for ${enrollment.courseName} was approved.`,
+    });
+
+    return updated;
+  }
+
+  /** Admin: decline the student's proposed fee. */
+  async rejectEnrollmentFee(enrollmentId: string) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { student: { select: { userId: true } } },
+    });
+
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+    if (enrollment.feeStatus !== FeeStatus.PROPOSED) {
+      throw new ConflictException(
+        `Fee decision already made (status: ${enrollment.feeStatus})`,
+      );
+    }
+
+    const updated = await this.prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { agreedFee: null, feeStatus: FeeStatus.REJECTED },
+    });
+
+    await this.notificationsService.create({
+      recipientId: enrollment.student.userId,
+      message: `Your proposed fee for ${enrollment.courseName} was declined.`,
+    });
+
+    return updated;
+  }
+
+  /** Admin: overwrite anyone's profile picture via a direct web link. */
+  async setProfilePicture(userId: string, profilePictureUrl: string) {
+    const student = await this.prisma.studentProfile.findUnique({ where: { userId } });
+    if (student) {
+      return this.prisma.studentProfile.update({
+        where: { id: student.id },
+        data: { profilePictureUrl },
+      });
+    }
+
+    const teacher = await this.prisma.teacherProfile.findUnique({ where: { userId } });
+    if (teacher) {
+      return this.prisma.teacherProfile.update({
+        where: { id: teacher.id },
+        data: { profilePictureUrl },
+      });
+    }
+
+    throw new NotFoundException('No profile found for this user');
+  }
+
+  /** Admin: clear anyone's profile picture. */
+  async clearProfilePicture(userId: string) {
+    const student = await this.prisma.studentProfile.findUnique({ where: { userId } });
+    if (student) {
+      return this.prisma.studentProfile.update({
+        where: { id: student.id },
+        data: { profilePictureUrl: null },
+      });
+    }
+
+    const teacher = await this.prisma.teacherProfile.findUnique({ where: { userId } });
+    if (teacher) {
+      return this.prisma.teacherProfile.update({
+        where: { id: teacher.id },
+        data: { profilePictureUrl: null },
+      });
+    }
+
+    throw new NotFoundException('No profile found for this user');
+  }
+
+  /** Admin: set a teacher's CV link. */
+  async setCv(userId: string, cvUrl: string) {
+    const teacher = await this.prisma.teacherProfile.findUnique({ where: { userId } });
+    if (!teacher) throw new NotFoundException('Teacher profile not found for this user');
+    return this.prisma.teacherProfile.update({ where: { id: teacher.id }, data: { cvUrl } });
+  }
+
+  /** Admin: clear a teacher's CV link. */
+  async clearCv(userId: string) {
+    const teacher = await this.prisma.teacherProfile.findUnique({ where: { userId } });
+    if (!teacher) throw new NotFoundException('Teacher profile not found for this user');
+    return this.prisma.teacherProfile.update({ where: { id: teacher.id }, data: { cvUrl: null } });
   }
 
   private async getTeacherOrThrow(teacherId: string) {

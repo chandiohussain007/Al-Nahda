@@ -2,11 +2,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Course, Level } from '@prisma/client';
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateEnrollmentDto {
@@ -35,4 +38,14 @@ export class CreateEnrollmentDto {
   @IsOptional()
   @IsEnum(Level)
   confirmedLevel?: Level;
+
+  @ApiPropertyOptional({
+    description: 'Fee the student proposes in whole units; admin approves or rejects it',
+    example: 150,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  proposedFee?: number;
 }

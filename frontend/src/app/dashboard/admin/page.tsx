@@ -7,12 +7,18 @@ import Link from 'next/link';
 import {
   apiErrorMessage,
   approveEnrollment,
+  approveEnrollmentFee,
   approveTeacher,
+  clearProfilePicture,
+  clearTeacherCv,
   fetchAdminEnrollments,
   fetchAdminStudents,
   fetchAdminTeachers,
   rejectEnrollment,
+  rejectEnrollmentFee,
   rejectTeacher,
+  setProfilePicture,
+  setTeacherCv,
 } from '@/lib/api';
 import {
   ENROLLMENT_STATUSES,
@@ -23,6 +29,13 @@ import {
   type TeacherProfile,
   type TeacherStatus,
 } from '@/lib/types';
+
+const FEE_COLORS: Record<string, string> = {
+  NONE: '#6b7280',
+  PROPOSED: '#f59e0b',
+  AGREED: '#10b981',
+  REJECTED: '#ef4444',
+};
 
 export default function AdminPage() {
   return (
@@ -81,6 +94,53 @@ function AdminDashboard() {
     }
   };
 
+  async function approveFeeWithPrompt(e: Enrollment) {
+    const input = window.prompt(
+      'Agreed fee (leave blank to accept the proposed amount):',
+      e.proposedFee === null ? '' : String(e.proposedFee),
+    );
+    if (input === null) return;
+
+    const trimmed = input.trim();
+    const agreedFee = trimmed === '' ? undefined : Number(trimmed);
+    if (agreedFee !== undefined && (!Number.isFinite(agreedFee) || agreedFee < 0)) {
+      setError('Enter a valid fee amount.');
+      return;
+    }
+
+    await act('Fee agreed.', () => approveEnrollmentFee(e.id, agreedFee));
+  }
+
+  async function rejectFeeWithPrompt(e: Enrollment) {
+    if (!window.confirm('Reject the proposed fee?')) return;
+    await act('Fee rejected.', () => rejectEnrollmentFee(e.id));
+  }
+
+  /** Admin media moderation: paste a direct web link, or blank to clear. */
+  async function changePicture(userId: string | undefined, name: string) {
+    if (!userId) return;
+    const input = window.prompt(`Profile picture URL for ${name} (blank to clear):`);
+    if (input === null) return;
+
+    const url = input.trim();
+    await act(
+      url ? 'Profile picture updated.' : 'Profile picture cleared.',
+      () => (url ? setProfilePicture(userId, url) : clearProfilePicture(userId)),
+    );
+  }
+
+  async function changeCv(userId: string | undefined, name: string) {
+    if (!userId) return;
+    const input = window.prompt(`CV link for ${name} (blank to clear):`);
+    if (input === null) return;
+
+    const url = input.trim();
+    await act(
+      url ? 'CV link updated.' : 'CV link cleared.',
+      () => (url ? setTeacherCv(userId, url) : clearTeacherCv(userId)),
+    );
+  }
+
   return (
     <>
       <h1>Admin</h1>
@@ -113,6 +173,7 @@ function AdminDashboard() {
             <tr>
               <th>Name</th>
               <th>Email</th>
+              <th>Phone</th>
               <th>Subjects</th>
               <th>Experience</th>
               <th>Status</th>
@@ -124,42 +185,61 @@ function AdminDashboard() {
               <tr key={t.id}>
                 <td>{t.fullName}</td>
                 <td>{t.user?.email ?? '—'}</td>
+                <td>{t.phoneNumber ?? '—'}</td>
                 <td>{t.subjectsTaught.join(', ') || '—'}</td>
                 <td>{t.experienceYears} yrs</td>
                 <td>
                   <StatusBadge status={t.teacherStatus} />
                 </td>
                 <td>
-                  {t.teacherStatus === 'PENDING' ? (
-                    <div className="row">
-                      <button
-                        type="button"
-                        className="success"
-                        disabled={busy}
-                        onClick={() =>
-                          void act('Teacher approved.', () => approveTeacher(t.id))
-                        }
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        disabled={busy}
-                        onClick={() => void act('Teacher rejected.', () => rejectTeacher(t.id))}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
+                  <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                    {t.teacherStatus === 'PENDING' && (
+                      <>
+                        <button
+                          type="button"
+                          className="success"
+                          disabled={busy}
+                          onClick={() =>
+                            void act('Teacher approved.', () => approveTeacher(t.id))
+                          }
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          disabled={busy}
+                          onClick={() =>
+                            void act('Teacher rejected.', () => rejectTeacher(t.id))
+                          }
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-sm"
+                      disabled={busy || !t.userId}
+                      onClick={() => void changePicture(t.userId, t.fullName)}
+                    >
+                      Picture
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-sm"
+                      disabled={busy || !t.userId}
+                      onClick={() => void changeCv(t.userId, t.fullName)}
+                    >
+                      CV
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {!loading && teachers.length === 0 && (
               <tr>
-                <td colSpan={6} className="muted">
+                <td colSpan={7} className="muted">
                   No teachers match this filter.
                 </td>
               </tr>
@@ -197,6 +277,7 @@ function AdminDashboard() {
               <th>Level</th>
               <th>Time slot</th>
               <th>Status</th>
+              <th>Fee</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -210,6 +291,36 @@ function AdminDashboard() {
                 <td>{e.preferredTimeSlot}</td>
                 <td>
                   <StatusBadge status={e.status} />
+                </td>
+                <td>
+                  <div className="row" style={{ gap: 6 }}>
+                    <span
+                      className="status-badge"
+                      style={{ background: FEE_COLORS[e.feeStatus] ?? '#6b7280' }}
+                    >
+                      {e.feeStatus}
+                    </span>
+                    {e.proposedFee !== null && <span className="muted">#{e.proposedFee}</span>}
+                    {e.agreedFee !== null && <span className="muted">→ #{e.agreedFee}</span>}
+                  </div>
+                  {e.feeStatus === 'PROPOSED' && (
+                    <div className="row" style={{ gap: 6, marginTop: 4 }}>
+                      <button
+                        className="btn-sm"
+                        disabled={busy}
+                        onClick={() => void approveFeeWithPrompt(e)}
+                      >
+                        Approve fee
+                      </button>
+                      <button
+                        className="btn-sm"
+                        disabled={busy}
+                        onClick={() => void rejectFeeWithPrompt(e)}
+                      >
+                        Reject fee
+                      </button>
+                    </div>
+                  )}
                 </td>
                 <td>
                   {e.status === 'PENDING' ? (
@@ -243,7 +354,7 @@ function AdminDashboard() {
             ))}
             {!loading && enrollments.length === 0 && (
               <tr>
-                <td colSpan={7} className="muted">
+                <td colSpan={8} className="muted">
                   No enrollments match this filter.
                 </td>
               </tr>
@@ -271,6 +382,15 @@ function AdminDashboard() {
                 <td className="muted">{new Date(s.user?.createdAt ?? '').toLocaleDateString()}</td>
                 <td>
                   <Link href={`/dashboard/admin/students/${s.id}`}>View</Link>
+                  {' · '}
+                  <button
+                    type="button"
+                    className="btn-sm"
+                    disabled={busy || !s.userId}
+                    onClick={() => void changePicture(s.userId, s.fullName)}
+                  >
+                    Picture
+                  </button>
                 </td>
               </tr>
             ))}

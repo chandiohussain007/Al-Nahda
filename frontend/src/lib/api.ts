@@ -187,3 +187,152 @@ export function apiStatus(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;
 }
 
+// ─── Assessment Module APIs ─────────────────────────────────────────────────
+import type {
+  Assessment,
+  Attempt,
+  AttemptResult,
+  CourseItem,
+  LevelContent,
+  Question,
+  StartAttemptResponse,
+  StudentEnrollmentRecord,
+  StudentEnrollmentStatus,
+} from './types';
+
+// --- questions ---------------------------------------------------------------
+export const fetchQuestions = (params?: { course?: string; level?: string; difficulty?: string }) =>
+  api.get<Question[]>('/api/questions', { params }).then((r) => r.data);
+
+export const fetchQuestion = (id: string) =>
+  api.get<Question>(`/api/questions/${id}`).then((r) => r.data);
+
+export const createQuestion = (dto: {
+  text: string;
+  course: string;
+  level: string;
+  options: string; // JSON string
+  correctOptionId: string;
+  difficulty?: string;
+  points?: number;
+  explanation?: string;
+}) => api.post<Question>('/api/questions', dto).then((r) => r.data);
+
+export const deleteQuestion = (id: string) =>
+  api.delete(`/api/questions/${id}`).then((r) => r.data);
+
+// --- course items ------------------------------------------------------------
+export const fetchCourses = () =>
+  api.get<CourseItem[]>('/api/courses').then((r) => r.data);
+
+export const fetchCourseLevels = (courseId: string) =>
+  api.get<LevelContent[]>(`/api/courses/${courseId}/levels`).then((r) => r.data);
+
+// --- assessments ------------------------------------------------------------
+export const fetchAssessments = () =>
+  api.get<Assessment[]>('/api/assessments').then((r) => r.data);
+
+export const fetchAssessment = (id: string) =>
+  api.get<Assessment>(`/api/assessments/${id}`).then((r) => r.data);
+
+export const createAssessment = (dto: {
+  courseId: string;
+  levelId?: string;
+  title: string;
+  description?: string;
+  durationMinutes: number;
+  passPercentage?: number;
+  attemptsAllowed?: number;
+  questionsPerAttempt?: number;
+}) => api.post<Assessment>('/api/assessments', dto).then((r) => r.data);
+
+export const publishAssessment = (id: string) =>
+  api.post<Assessment>(`/api/assessments/${id}/publish`).then((r) => r.data);
+
+export const setAssessmentQuestions = (id: string, questionIds: string[]) =>
+  api.post<Assessment>(`/api/assessments/${id}/questions`, { questionIds }).then((r) => r.data);
+
+// --- student enrollments (new module) ----------------------------------------
+export const applyForEnrollment = (dto: {
+  courseId: string;
+  selectedLevelId?: string;
+  applicationData?: string;
+  proposedFee?: number;
+}) => api.post<StudentEnrollmentRecord>('/api/student-enrollments', dto).then((r) => r.data);
+
+export const fetchMyStudentEnrollments = () =>
+  api.get<StudentEnrollmentRecord[]>('/api/student-enrollments/mine').then((r) => r.data);
+
+export const fetchAllStudentEnrollments = (status?: StudentEnrollmentStatus) =>
+  api
+    .get<StudentEnrollmentRecord[]>('/api/student-enrollments', { params: status ? { status } : {} })
+    .then((r) => r.data);
+
+export const updateEnrollmentStatus = (
+  id: string,
+  dto: { status: StudentEnrollmentStatus; assignedAssessmentId?: string },
+) =>
+  api
+    .patch<StudentEnrollmentRecord>(`/api/student-enrollments/${id}/status`, dto)
+    .then((r) => r.data);
+
+// --- fee bidding (admin) -----------------------------------------------------
+export const approveStudentEnrollmentFee = (id: string, agreedFee?: number) =>
+  api
+    .patch<StudentEnrollmentRecord>(`/api/student-enrollments/${id}/fee/approve`, {
+      ...(agreedFee === undefined ? {} : { agreedFee }),
+    })
+    .then((r) => r.data);
+
+export const rejectStudentEnrollmentFee = (id: string) =>
+  api
+    .patch<StudentEnrollmentRecord>(`/api/student-enrollments/${id}/fee/reject`)
+    .then((r) => r.data);
+
+export const approveEnrollmentFee = (id: string, agreedFee?: number) =>
+  api
+    .patch<Enrollment>(`/api/admin/enrollments/${id}/fee/approve`, {
+      ...(agreedFee === undefined ? {} : { agreedFee }),
+    })
+    .then((r) => r.data);
+
+export const rejectEnrollmentFee = (id: string) =>
+  api.patch<Enrollment>(`/api/admin/enrollments/${id}/fee/reject`).then((r) => r.data);
+
+// --- admin media moderation (URL-based) --------------------------------------
+export const setProfilePicture = (userId: string, profilePictureUrl: string) =>
+  api
+    .patch<StudentProfile | TeacherProfile>(
+      `/api/admin/users/${userId}/profile-picture`,
+      { profilePictureUrl },
+    )
+    .then((r) => r.data);
+
+export const clearProfilePicture = (userId: string) =>
+  api
+    .delete<StudentProfile | TeacherProfile>(`/api/admin/users/${userId}/profile-picture`)
+    .then((r) => r.data);
+
+export const setTeacherCv = (userId: string, cvUrl: string) =>
+  api.patch<TeacherProfile>(`/api/admin/users/${userId}/cv`, { cvUrl }).then((r) => r.data);
+
+export const clearTeacherCv = (userId: string) =>
+  api.delete<TeacherProfile>(`/api/admin/users/${userId}/cv`).then((r) => r.data);
+
+// --- attempts ----------------------------------------------------------------
+export const startAttempt = (dto: { assessmentId: string; enrollmentId?: string }) =>
+  api.post<StartAttemptResponse>('/api/attempts/start', dto).then((r) => r.data);
+
+export const saveAnswer = (
+  attemptId: string,
+  dto: { questionId: string; selectedOptionId: string | null },
+) => api.post(`/api/attempts/${attemptId}/answer`, dto).then((r) => r.data);
+
+export const submitAttempt = (attemptId: string) =>
+  api.post<AttemptResult>(`/api/attempts/${attemptId}/submit`).then((r) => r.data);
+
+export const fetchMyAttempts = () =>
+  api.get<Attempt[]>('/api/attempts').then((r) => r.data);
+
+export const fetchAttempt = (id: string) =>
+  api.get<Attempt>(`/api/attempts/${id}`).then((r) => r.data);

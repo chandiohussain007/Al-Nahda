@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EnrollmentStatus, Level, UserRole } from '@prisma/client';
+import { EnrollmentStatus, FeeStatus, Level, UserRole } from '@prisma/client';
+import { stripTeacherPrivacy } from '../common/privacy.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StudentsService } from '../students/students.service.js';
@@ -53,6 +54,8 @@ export class EnrollmentsService {
       throw new BadRequestException('Provide confirmedLevel or evaluationTestId');
     }
 
+    const hasProposal = typeof dto.proposedFee === 'number';
+
     const enrollment = await this.prisma.enrollment.create({
       data: {
         studentId: student.id,
@@ -60,6 +63,8 @@ export class EnrollmentsService {
         courseName: dto.courseName,
         confirmedLevel,
         preferredTimeSlot: dto.preferredTimeSlot,
+        proposedFee: hasProposal ? dto.proposedFee : null,
+        feeStatus: hasProposal ? FeeStatus.PROPOSED : FeeStatus.NONE,
       },
       include: { student: true, teacher: true },
     });
@@ -70,7 +75,14 @@ export class EnrollmentsService {
       message: `New enrollment request from ${student.fullName} for ${dto.courseName} (${dto.preferredTimeSlot}).`,
     });
 
-    return enrollment;
+    // Students never see the teacher's phone number.
+    return {
+      ...enrollment,
+      teacher: stripTeacherPrivacy(enrollment.teacher, {
+        sub: userId,
+        role: UserRole.STUDENT,
+      }),
+    };
   }
 
   /**
@@ -158,6 +170,10 @@ export class EnrollmentsService {
       throw new ForbiddenException('You do not have access to this enrollment');
     }
 
-    return enrollment;
+    // phoneNumber is only exposed to the profile owner and to admins.
+    return {
+      ...enrollment,
+      teacher: stripTeacherPrivacy(enrollment.teacher, { sub: userId, role }),
+    };
   }
 }
