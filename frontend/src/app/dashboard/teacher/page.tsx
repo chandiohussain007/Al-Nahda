@@ -21,6 +21,13 @@ const SUBJECT_OPTIONS = [
   { value: 'LEARN_ARABIC', label: 'Arabic' },
 ];
 
+const TIMESLOT_OPTIONS = [
+  { value: 'MORNING', label: 'Morning (08:00 - 12:00)' },
+  { value: 'AFTERNOON', label: 'Afternoon (12:00 - 16:00)' },
+  { value: 'EVENING', label: 'Evening (16:00 - 20:00)' },
+  { value: 'NIGHT', label: 'Night (20:00 - 24:00)' },
+];
+
 export default function TeacherPage() {
   return (
     <RequireRole role="TEACHER">
@@ -45,6 +52,7 @@ function TeacherDashboard() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [cvUrl, setCvUrl] = useState('');
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,6 +67,7 @@ function TeacherDashboard() {
       setSubjects(existing.subjectsTaught);
       setPhoneNumber(existing.phoneNumber ?? '');
       setCvUrl(existing.cvUrl ?? '');
+      setTimeSlots(existing.availableTimeSlots ?? []);
       setEnrollments(await fetchMyEnrollments());
     } catch (e) {
       // 404 = no profile created yet, a normal first-login state.
@@ -79,6 +88,11 @@ function TeacherDashboard() {
       prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value],
     );
 
+  const toggleTimeSlot = (value: string) =>
+    setTimeSlots((prev) =>
+      prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value],
+    );
+
   const submitProfile = async () => {
     setBusy(true);
     setNotice(null);
@@ -95,6 +109,7 @@ function TeacherDashboard() {
         subjectsTaught: subjects,
         phoneNumber: phoneNumber.trim() || null,
         cvUrl: cvUrl.trim() || null,
+        availableTimeSlots: timeSlots,
       });
       setProfile(saved);
       setNotice(
@@ -270,6 +285,25 @@ function TeacherDashboard() {
                     style={{ width: 'auto' }}
                     checked={subjects.includes(opt.value)}
                     onChange={() => toggleSubject(opt.value)}
+                  />{' '}
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="field-row">
+          <div>
+            <label>Available time slots</label>
+            <div className="row">
+              {TIMESLOT_OPTIONS.map((opt) => (
+                <label key={opt.value} className="row" style={{ margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    style={{ width: 'auto' }}
+                    checked={timeSlots.includes(opt.value)}
+                    onChange={() => toggleTimeSlot(opt.value)}
                   />{' '}
                   {opt.label}
                 </label>

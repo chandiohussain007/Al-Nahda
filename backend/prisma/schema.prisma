@@ -142,6 +142,7 @@ model TeacherProfile {
   subjectsTaught    String[]
   phoneNumber       String?
   cvUrl             String?
+  availableTimeSlots String[]
   teacherStatus     TeacherStatus @default(PENDING)
 
   user        User         @relation(fields: [userId], references: [id])

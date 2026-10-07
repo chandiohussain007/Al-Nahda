@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import RequireRole from '@/components/RequireRole';
@@ -24,6 +24,14 @@ import {
   type StudentProgress,
   type StudentProfile,
 } from '@/lib/types';
+
+const TIMESLOT_OPTIONS = [
+  { value: '', label: 'Any time (no filter)' },
+  { value: 'MORNING', label: 'Morning (08:00 - 12:00)' },
+  { value: 'AFTERNOON', label: 'Afternoon (12:00 - 16:00)' },
+  { value: 'EVENING', label: 'Evening (16:00 - 20:00)' },
+  { value: 'NIGHT', label: 'Night (20:00 - 24:00)' },
+];
 
 export default function StudentPage() {
   return (
@@ -77,6 +85,12 @@ function StudentDashboard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    fetchTeacherDirectory(timeSlot || undefined)
+      .then(setDirectory)
+      .catch((e) => setError(apiErrorMessage(e, 'Could not filter teachers')));
+  }, [timeSlot]);
 
   const submitProfile = async () => {
     setBusy(true);
@@ -157,8 +171,8 @@ function StudentDashboard() {
 
   const sendEnrollment = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!teacherId || !timeSlot.trim()) {
-      setError('Pick a teacher and enter a preferred time slot.');
+    if (!teacherId) {
+      setError('Pick a teacher from the list.');
       return;
     }
     setBusy(true);
@@ -168,7 +182,7 @@ function StudentDashboard() {
         teacherId,
         courseName: enrollCourse,
         confirmedLevel: enrollLevel,
-        preferredTimeSlot: timeSlot.trim(),
+        preferredTimeSlot: timeSlot || 'Any time',
         // The backend derives `confirmedLevel` from this test when supplied.
         evaluationTestId: evalResult?.id,
       });
@@ -448,12 +462,17 @@ function StudentDashboard() {
           <div className="field-row">
             <div>
               <label htmlFor="enr-slot">Preferred time slot</label>
-              <input
+              <select
                 id="enr-slot"
                 value={timeSlot}
                 onChange={(e) => setTimeSlot(e.target.value)}
-                placeholder="Mon/Wed 18:00-19:00"
-              />
+              >
+                {TIMESLOT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

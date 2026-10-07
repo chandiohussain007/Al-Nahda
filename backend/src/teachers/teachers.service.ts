@@ -38,9 +38,12 @@ export class TeachersService {
    * enrollment. Selects profile fields only, so user emails are never
    * exposed to other accounts.
    */
-  listApproved() {
+  listApproved(timeSlot?: string) {
     return this.prisma.teacherProfile.findMany({
-      where: { teacherStatus: TeacherStatus.APPROVED },
+      where: {
+        teacherStatus: TeacherStatus.APPROVED,
+        ...(timeSlot ? { availableTimeSlots: { has: timeSlot } } : {}),
+      },
       select: {
         id: true,
         fullName: true,
@@ -49,6 +52,7 @@ export class TeachersService {
         qualifications: true,
         experienceYears: true,
         subjectsTaught: true,
+        availableTimeSlots: true,
       },
       orderBy: { fullName: 'asc' },
     });

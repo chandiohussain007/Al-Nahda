@@ -52,6 +52,7 @@ export interface DirectoryTeacher {
   qualifications: string[];
   experienceYears: number;
   subjectsTaught: string[];
+  availableTimeSlots?: string[];
 }
 
 export interface TeacherProfile extends DirectoryTeacher {
@@ -62,6 +63,7 @@ export interface TeacherProfile extends DirectoryTeacher {
   /** Contact phone - only returned to ADMIN and to the owning teacher. */
   phoneNumber?: string | null;
   cvUrl?: string | null;
+  availableTimeSlots?: string[];
 }
 
 export interface StudentProfile {
@@ -188,6 +190,7 @@ export interface UpsertTeacherProfile {
   subjectsTaught: string[];
   phoneNumber?: string | null;
   cvUrl?: string | null;
+  availableTimeSlots?: string[];
 }
 
 export interface CreateEnrollment {

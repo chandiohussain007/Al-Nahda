@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { TeachersService } from './teachers.service.js';
 
@@ -17,7 +17,8 @@ export class TeachersDirectoryController {
 
   @Get()
   @ApiOperation({ summary: 'List approved teachers (enrollment picker)' })
-  listApproved() {
-    return this.teachersService.listApproved();
+  @ApiQuery({ name: 'timeSlot', required: false })
+  listApproved(@Query('timeSlot') timeSlot?: string) {
+    return this.teachersService.listApproved(timeSlot);
   }
 }

@@ -61,6 +61,12 @@ export class UpsertTeacherProfileDto {
   @IsOptional()
   @IsUrl({ require_protocol: true })
   cvUrl?: string | null;
+
+  @ApiPropertyOptional({ type: [String], example: ['09:00 AM - 10:00 AM', '04:00 PM - 05:00 PM'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  availableTimeSlots?: string[];
 }
 
 export class SendTeacherNotificationDto {

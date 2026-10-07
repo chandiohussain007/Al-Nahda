@@ -82,8 +82,10 @@ export const fetchHealth = () => api.get<AnyRecord>('/api/health').then((r) => r
 export const fetchReadiness = () => api.get<AnyRecord>('/api/health/ready').then((r) => r.data);
 
 // --- teacher directory (approved only) --------------------------------------
-export const fetchTeacherDirectory = () =>
-  api.get<DirectoryTeacher[]>('/api/teachers').then((r) => r.data);
+export const fetchTeacherDirectory = (timeSlot?: string) =>
+  api
+    .get<DirectoryTeacher[]>('/api/teachers', { params: timeSlot ? { timeSlot } : {} })
+    .then((r) => r.data);
 
 // --- admin ------------------------------------------------------------------
 export const fetchAdminTeachers = (status?: TeacherStatus) =>
