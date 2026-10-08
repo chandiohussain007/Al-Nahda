@@ -54,17 +54,11 @@ function StudentDashboard() {
   const [fullName, setFullName] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [bio, setBio] = useState('');
+  const [timeSlot, setTimeSlot] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const rows = await fetchTeacherDirectory();
-      setDirectory(rows);
-    } catch (e) {
-      setError(apiErrorMessage(e, 'Could not load the teacher directory'));
-    }
-
     try {
       const existing = await fetchStudentProfile();
       setProfile(existing);
@@ -87,9 +81,19 @@ function StudentDashboard() {
   }, [load]);
 
   useEffect(() => {
+    let cancelled = false;
+
     fetchTeacherDirectory(timeSlot || undefined)
-      .then(setDirectory)
-      .catch((e) => setError(apiErrorMessage(e, 'Could not filter teachers')));
+      .then((rows) => {
+        if (!cancelled) setDirectory(rows);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(apiErrorMessage(e, 'Could not filter teachers'));
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [timeSlot]);
 
   const submitProfile = async () => {
@@ -123,7 +127,6 @@ function StudentDashboard() {
   const [teacherId, setTeacherId] = useState('');
   const [enrollCourse, setEnrollCourse] = useState<Course>('LEARN_QURAN');
   const [enrollLevel, setEnrollLevel] = useState<Level>('BEGINNER');
-  const [timeSlot, setTimeSlot] = useState('');
 
   const loadQuestions = async () => {
     setBusy(true);
@@ -479,7 +482,7 @@ function StudentDashboard() {
           <button
             type="submit"
             className="primary"
-            disabled={busy || !teacherId || !timeSlot.trim()}
+            disabled={busy || !teacherId}
           >
             Submit request
           </button>

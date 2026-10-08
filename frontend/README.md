@@ -18,6 +18,18 @@ npm run dev                  # http://localhost:3000
 | `NEXT_PUBLIC_API_URL` | Base URL of the API, e.g. `https://al-nahda-backend.onrender.com` (no trailing slash) |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Must be the **same** client as `GOOGLE_CLIENT_ID` on the backend, or token verification 401s |
 
+## Deployment environment
+
+`.env.local` is for local development and is intentionally git-ignored. In
+Vercel, set `NEXT_PUBLIC_API_URL` to the public Render API URL and
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` to the same Google client ID configured on
+Render, then redeploy. These `NEXT_PUBLIC_` values are included in the frontend
+build; changing them requires a new deployment.
+
+In Render, configure the backend's `DATABASE_URL`, `JWT_SECRET`, and
+`GOOGLE_CLIENT_ID` environment variables. Set `CORS_ORIGINS` to the deployed
+Vercel origin when using an explicit CORS allow-list.
+
 ## Routes
 
 | Path | Access | What it does |
