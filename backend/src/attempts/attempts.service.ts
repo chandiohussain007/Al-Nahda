@@ -109,7 +109,7 @@ export class AttemptsService {
 
   /** Save or update the student's answer for one question. */
   async saveAnswer(userId: string, attemptId: string, input: SubmitAnswerInput) {
-    const attempt = await this.requireInProgressAttempt(userId, attemptId);
+    await this.requireInProgressAttempt(userId, attemptId);
 
     // Verify question belongs to this attempt
     const attemptQuestion = await this.prisma.attemptQuestion.findFirst({

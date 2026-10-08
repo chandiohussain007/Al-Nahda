@@ -550,10 +550,11 @@ function TeacherDashboard() {
           <button
             type="submit"
             className="primary"
-            disabled={busy || !recipientId.trim() || !message.trim()}
+            disabled={busy || !recipientId.trim() || !message.trim() || !profile}
           >
             Send
           </button>
+          {!profile && <p className="muted">Create your profile to send notifications.</p>}
         </form>
       </div>
     </>

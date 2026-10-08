@@ -56,7 +56,7 @@ export class QuestionsService {
       throw new ForbiddenException('You can only edit your own questions');
     }
 
-    const updates: Record<string, unknown> = { ...dto };
+    const updates: Record<string, unknown> = Object.assign({}, dto);
 
     if (dto.options) {
       const options = this.parseOptions(dto.options);

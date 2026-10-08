@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiErrorMessage, applyForEnrollment, fetchMyStudentEnrollments } from '@/lib/api';
-import type { StudentEnrollmentRecord } from '@/lib/types';
+import { apiErrorMessage, applyForEnrollment, fetchMyStudentEnrollments, fetchStudentProfile } from '@/lib/api';
+import type { StudentEnrollmentRecord, StudentProfile } from '@/lib/types';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#f59e0b',
@@ -23,15 +23,23 @@ const COURSES = [
 
 export default function StudentCoursesPage() {
   const router = useRouter();
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [enrollments, setEnrollments] = useState<StudentEnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchMyStudentEnrollments()
+    fetchStudentProfile()
+      .then((p) => {
+        setProfile(p);
+        return fetchMyStudentEnrollments();
+      })
       .then(setEnrollments)
-      .catch(() => setEnrollments([]))
+      .catch(() => {
+        setProfile(null);
+        setEnrollments([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -62,6 +70,7 @@ export default function StudentCoursesPage() {
       <p className="muted">Choose a course to start your learning journey.</p>
 
       {error && <p className="error-banner">{error}</p>}
+      {!profile && <p className="error-banner">You must create your profile in the Dashboard first to apply for courses.</p>}
 
       <div className="course-grid">
         {COURSES.map((course) => {
@@ -98,7 +107,7 @@ export default function StudentCoursesPage() {
               {!enrolled && (
                 <button
                   className="btn-primary"
-                  disabled={applying === course.id}
+                  disabled={applying === course.id || !profile}
                   onClick={() => handleApply(course.id)}
                 >
                   {applying === course.id ? 'Applying…' : 'Apply Now'}

@@ -24,8 +24,8 @@ export class StudentsService {
   upsertProfile(userId: string, dto: UpsertStudentProfileDto) {
     return this.prisma.studentProfile.upsert({
       where: { userId },
-      create: { userId, ...dto },
-      update: { ...dto },
+      create: { userId, ...Object.assign({}, dto) },
+      update: Object.assign({}, dto),
     });
   }
 

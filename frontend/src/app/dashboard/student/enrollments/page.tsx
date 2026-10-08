@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
-import { apiErrorMessage, fetchMyEnrollments } from '@/lib/api';
+import { apiErrorMessage, apiStatus, fetchMyEnrollments, fetchStudentProfile } from '@/lib/api';
 import type { Enrollment } from '@/lib/types';
 
 /** Full enrollment list for the signed-in student (Progress only summarises). */
@@ -15,15 +15,25 @@ export default function StudentEnrollmentsPage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchMyEnrollments()
+    fetchStudentProfile()
+      .then(() => {
+        if (cancelled) return;
+        return fetchMyEnrollments();
+      })
       .then((data) => {
-        if (!cancelled) {
+        if (!cancelled && data) {
           setRows(data);
           setError(null);
         }
       })
       .catch((e) => {
-        if (!cancelled) setError(apiErrorMessage(e, 'Could not load your enrollments'));
+        if (!cancelled) {
+          if (apiStatus(e) === 404) {
+             setError('Create your profile in the Dashboard first.');
+          } else {
+             setError(apiErrorMessage(e, 'Could not load your enrollments'));
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

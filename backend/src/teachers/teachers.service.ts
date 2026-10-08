@@ -28,8 +28,8 @@ export class TeachersService {
   upsertProfile(userId: string, dto: UpsertTeacherProfileDto) {
     return this.prisma.teacherProfile.upsert({
       where: { userId },
-      create: { userId, ...dto },
-      update: { ...dto },
+      create: { userId, ...Object.assign({}, dto) },
+      update: Object.assign({}, dto),
     });
   }
 

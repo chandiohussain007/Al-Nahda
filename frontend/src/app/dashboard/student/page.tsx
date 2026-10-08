@@ -389,9 +389,10 @@ function StudentDashboard() {
                 </fieldset>
               ))}
 
-              <button type="submit" className="primary" disabled={busy}>
+              <button type="submit" className="primary" disabled={busy || !profile}>
                 Submit evaluation
               </button>
+              {!profile && <p className="muted">Create your profile to submit an evaluation.</p>}
             </>
           )}
 
@@ -403,91 +404,19 @@ function StudentDashboard() {
           )}
         </form>
 
-        <form className="card" onSubmit={(e) => void sendEnrollment(e)}>
+        <div className="card">
           <h2>Request enrollment</h2>
-
-          <div className="field-row">
-            <div>
-              <label htmlFor="enr-teacher">Teacher</label>
-              <select
-                id="enr-teacher"
-                value={teacherId}
-                onChange={(e) => setTeacherId(e.target.value)}
-                disabled={directory.length === 0}
-              >
-                <option value="">
-                  {directory.length === 0 ? 'No approved teachers yet' : 'SelectΓÇª'}
-                </option>
-                {directory.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.fullName} ΓÇö {t.subjectsTaught.join(', ') || 'general'}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="enr-course">Course</label>
-              <select
-                id="enr-course"
-                value={enrollCourse}
-                onChange={(e) => setEnrollCourse(e.target.value as Course)}
-              >
-                {COURSES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="enr-level">Level</label>
-              <select
-                id="enr-level"
-                value={enrollLevel}
-                onChange={(e) => setEnrollLevel(e.target.value as Level)}
-              >
-                {LEVELS.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-              {evalResult && (
-                <p className="muted" style={{ marginTop: 4 }}>
-                  Using evaluation result: {evalResult.assignedLevel} ({evalResult.score}%)
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="field-row">
-            <div>
-              <label htmlFor="enr-slot">Preferred time slot</label>
-              <select
-                id="enr-slot"
-                value={timeSlot}
-                onChange={(e) => setTimeSlot(e.target.value)}
-              >
-                {TIMESLOT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
+          <p className="muted">
+            The enrollment process has moved. Browse our courses to apply for an enrollment.
+          </p>
           <button
-            type="submit"
+            type="button"
             className="primary"
-            disabled={busy || !teacherId}
+            onClick={() => window.location.assign('/dashboard/student/courses')}
           >
-            Submit request
+            Browse Courses →
           </button>
-          <p className="muted">An admin activates the enrollment after review.</p>
-        </form>
+        </div>
       </div>
     </>
   );

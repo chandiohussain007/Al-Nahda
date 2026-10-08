@@ -250,117 +250,16 @@ function AdminDashboard() {
 
       <div className="card">
         <div className="row">
-          <h2>Enrollments ({enrollments.length})</h2>
+          <h2>Enrollments ({enrollments.length} legacy)</h2>
           <span className="spacer" />
-          <label style={{ margin: 0 }}>
-            Filter{' '}
-            <select
-              value={enrollmentFilter}
-              onChange={(e) => setEnrollmentFilter(e.target.value as EnrollmentStatus | '')}
-            >
-              <option value="">All</option>
-              {ENROLLMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Link href="/dashboard/admin/enrollments">
+            <button className="primary">Manage All Enrollments →</button>
+          </Link>
         </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Teacher</th>
-              <th>Course</th>
-              <th>Level</th>
-              <th>Time slot</th>
-              <th>Status</th>
-              <th>Fee</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {enrollments.map((e) => (
-              <tr key={e.id}>
-                <td>{e.student?.fullName ?? e.studentId}</td>
-                <td>{e.teacher?.fullName ?? e.teacherId}</td>
-                <td>{e.courseName}</td>
-                <td>{e.confirmedLevel}</td>
-                <td>{e.preferredTimeSlot}</td>
-                <td>
-                  <StatusBadge status={e.status} />
-                </td>
-                <td>
-                  <div className="row" style={{ gap: 6 }}>
-                    <span
-                      className="status-badge"
-                      style={{ background: FEE_COLORS[e.feeStatus] ?? '#6b7280' }}
-                    >
-                      {e.feeStatus}
-                    </span>
-                    {e.proposedFee !== null && <span className="muted">#{e.proposedFee}</span>}
-                    {e.agreedFee !== null && <span className="muted">→ #{e.agreedFee}</span>}
-                  </div>
-                  {e.feeStatus === 'PROPOSED' && (
-                    <div className="row" style={{ gap: 6, marginTop: 4 }}>
-                      <button
-                        className="btn-sm"
-                        disabled={busy}
-                        onClick={() => void approveFeeWithPrompt(e)}
-                      >
-                        Approve fee
-                      </button>
-                      <button
-                        className="btn-sm"
-                        disabled={busy}
-                        onClick={() => void rejectFeeWithPrompt(e)}
-                      >
-                        Reject fee
-                      </button>
-                    </div>
-                  )}
-                </td>
-                <td>
-                  {e.status === 'PENDING' ? (
-                    <div className="row">
-                      <button
-                        type="button"
-                        className="success"
-                        disabled={busy}
-                        onClick={() =>
-                          void act('Enrollment activated.', () => approveEnrollment(e.id))
-                        }
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        disabled={busy}
-                        onClick={() =>
-                          void act('Enrollment rejected.', () => rejectEnrollment(e.id))
-                        }
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!loading && enrollments.length === 0 && (
-              <tr>
-                <td colSpan={8} className="muted">
-                  No enrollments match this filter.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <p className="muted">
+          Enrollment management has moved to a dedicated page for the new workflow. 
+          Use the button above to manage them.
+        </p>
       </div>
 
       <div className="card">
