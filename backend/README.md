@@ -21,6 +21,7 @@ Copy `.env.example` to `.env` and provide:
 | `NODE_ENV` | `development` / `production` (production enables strict env validation) |
 | `PORT` | HTTP port (default `3000`) |
 | `DATABASE_URL` | PostgreSQL connection string |
+| `DIRECT_URL` | Direct PostgreSQL connection string used by Prisma migrations (bypasses poolers) |
 | `JWT_SECRET` | Secret used to sign internal JWTs (≥ 16 chars in production) |
 | `GOOGLE_CLIENT_ID` | Google OAuth client id used to validate token audience |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (server-side only) |
@@ -31,6 +32,9 @@ Copy `.env.example` to `.env` and provide:
 In `NODE_ENV=production` the app fails fast at boot if `DATABASE_URL`,
 `JWT_SECRET` or `GOOGLE_CLIENT_ID` are missing, if `JWT_SECRET` is weak/default,
 or if `PORT` is not numeric (see `src/config/env.validation.ts`).
+Prisma also requires `DIRECT_URL` for schema validation and migrations. When
+using a pooled database URL, configure this as the database provider's direct,
+non-pooler connection string.
 
 ## Scripts
 
@@ -53,6 +57,12 @@ npx prisma migrate dev       # create/apply migrations during development
 npx prisma migrate deploy    # apply committed migrations (CI, production)
 npx prisma generate          # regenerate the Prisma client
 ```
+
+Production deployments must provide both `DATABASE_URL` and `DIRECT_URL`.
+GitHub Actions points both to its local PostgreSQL service. On Render, add
+`DIRECT_URL` in the backend service's environment settings, using the direct
+connection string from the database provider (for Supabase, use its direct
+connection URI rather than a pooler URI).
 
 ## Authentication flow
 

@@ -50,6 +50,7 @@ describe('TeachersService', () => {
         qualifications: true,
         experienceYears: true,
         subjectsTaught: true,
+        availableTimeSlots: true,
       },
       orderBy: { fullName: 'asc' },
     });

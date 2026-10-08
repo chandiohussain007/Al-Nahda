@@ -21,6 +21,9 @@ services:
         # Linked Supabase database; Render syncs the connection string
         # automatically, so the service picks it up without manual entry.
         sync: true
+      - key: DIRECT_URL
+        # Set to the Supabase direct (non-pooler) connection string in Render.
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: GOOGLE_CLIENT_ID

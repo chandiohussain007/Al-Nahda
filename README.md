@@ -72,12 +72,13 @@ redeploy clicks needed.
    `render.yaml` automatically.
 2. Attach the **Supabase PostgreSQL database** to the service. `DATABASE_URL` is
    `sync: true`, so Render fills it in for you.
-3. Go to **Settings → Deploy** and confirm **Auto-Deploy = On** (the service was
+3. Set `DIRECT_URL` in the Render service environment to the Supabase direct
+   (non-pooler) connection string; Prisma uses it for migrations.
+4. Go to **Settings → Deploy** and confirm **Auto-Deploy = On** (the service was
    created from a manual form, so the toggle has to be switched on — the
    `render.yaml` above declares it).
-4. Optional: add a `SENTRY_DSN` config var to enable error tracking.
+5. Optional: add a `SENTRY_DSN` config var to enable error tracking.
 
 To move a manually-created service onto this blueprint, use Render's
 **"Convert to Blueprint"** in the service's Deploy settings — it rewrites the
 service to match `render.yaml` (service name, env vars, auto-deploy).
-
