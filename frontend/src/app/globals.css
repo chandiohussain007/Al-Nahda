@@ -1,3 +1,61 @@
+/* ─── Design system foundation (Tailwind CSS v4) ───────────────────────────
+ * Tokens mirror the AI Studio landing-page palette so the app and landing
+ * share one visual language. Preflight is intentionally skipped: the legacy
+ * utility CSS defines its own element styles, and enabling Tailwind's reset
+ * mid-migration would change every existing page at once.
+ *
+ * Cascade layer order matters: the legacy CSS lives in `base` so Tailwind
+ * utilities (in `utilities`) always win for new components.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-serif: "Cinzel", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-arabic: "Amiri", "Traditional Arabic", serif;
+
+  --color-primary: #0b1f33;
+  --color-deep: #06131f;
+  --color-ivory: #f8f5ec;
+  --color-surface: #ffffff;
+  --color-gold: #c6a15b;
+  --color-gold-light: #e5d09a;
+  --color-teal: #176b68;
+  --color-terracotta: #a96845;
+  --color-charcoal: #17212b;
+  --color-sandstone: #ded7c8;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+/* Semantic app variables — flipped by the `.dark` class (ThemeProvider). */
+:root {
+  --app-bg: #f8f5ec;
+  --app-text: #17212b;
+  --app-card-bg: #ffffff;
+  --app-card-border: #ded7c8;
+  --app-muted: #5b6672;
+  --app-accent: #176b68;
+}
+
+.dark {
+  --app-bg: #06131f;
+  --app-text: #f8f5ec;
+  --app-card-bg: #0b1f33;
+  --app-card-border: rgba(198, 161, 91, 0.25);
+  --app-muted: #e5d09a;
+  --app-accent: #c6a15b;
+}
+
+/* Legacy application styles — kept in `base` so utilities override them. */
+@layer base {
 * {
   box-sizing: border-box;
 }
@@ -9,10 +67,52 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: #f6f7f9;
-  color: #16202c;
+  font-family: var(--font-sans);
+  background: var(--app-bg);
+  color: var(--app-text);
   line-height: 1.5;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode support for the legacy utility classes (until Phase 6 rewrites
+ * each page with the shared component library). */
+.dark body,
+.dark input,
+.dark select,
+.dark textarea {
+  background: var(--app-card-bg);
+  color: var(--app-text);
+}
+
+.dark .card,
+.dark .nav,
+.dark .modal,
+.dark .form-card {
+  background: var(--app-card-bg);
+  border-color: var(--app-card-border);
+  color: var(--app-text);
+}
+
+.dark .muted,
+.dark th {
+  color: var(--app-muted);
+}
+
+.dark a {
+  color: var(--color-gold-light);
+}
+
+.dark button:not(.primary):not(.danger):not(.success) {
+  background: transparent;
+  border-color: var(--app-card-border);
+  color: var(--app-text);
+}
+
+.dark table th,
+.dark table td,
+.dark .field-row input,
+.dark .q-pick-row {
+  border-color: var(--app-card-border);
 }
 
 a {
@@ -412,4 +512,73 @@ th {
 .stat { background: #0f172a; border-radius: 10px; padding: 16px 10px; }
 .stat-label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; }
 .stat-value { display: block; font-size: 1.4rem; font-weight: 800; color: #f1f5f9; }
+}
 
+/* ─── Landing page: scoped preflight emulation ──────────────────────────────
+ * The AI Studio landing components were built against Tailwind's preflight.
+ * Preflight stays disabled globally (it would restyle the legacy dashboard),
+ * so these resets are scoped to the landing container instead. Utilities still
+ * win over everything here because they live in the `utilities` layer. */
+@layer base {
+  .landing h1, .landing h2, .landing h3, .landing h4, .landing h5, .landing h6,
+  .landing p, .landing figure, .landing blockquote, .landing dl, .landing dd {
+    margin: 0;
+  }
+
+  .landing ul, .landing ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .landing button {
+    border: none;
+    background: none;
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+
+  .landing a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .landing img, .landing svg, .landing video {
+    display: block;
+    max-width: 100%;
+  }
+
+  .landing input, .landing textarea, .landing select {
+    font: inherit;
+    margin: 0;
+  }
+}
+
+/* --- Landing page motion helpers --------------------------------------- */
+/* The AI Studio landing components (modals, dropdowns, mobile drawer) rely
+   on a simple fade/slide entrance. Kept here as plain CSS so the ported
+   components don't need Tailwind animation config. */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.24s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
+}

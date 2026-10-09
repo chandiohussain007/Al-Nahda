@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -16,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { TeacherApprovalGuard } from '../auth/guards/teacher-approval.guard.js';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
 import { CreateEnrollmentDto } from './enrollments.dto.js';
 import { EnrollmentsService } from './enrollments.service.js';
 
@@ -35,8 +37,11 @@ export class EnrollmentsController {
 
   @Get()
   @ApiOperation({ summary: 'List enrollments for the authenticated student or teacher' })
-  list(@CurrentUser() user: AuthenticatedUser) {
-    return this.enrollmentsService.list(user.sub, user.role);
+  list(@CurrentUser() user: AuthenticatedUser, @Query() query: PaginationQueryDto) {
+    return this.enrollmentsService.list(user.sub, user.role, {
+      skip: query.skip,
+      take: query.take,
+    });
   }
 
   @Patch(':id/accept')

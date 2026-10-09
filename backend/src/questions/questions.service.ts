@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Course, Difficulty, Level, Prisma, UserRole } from '@prisma/client';
+import type { Pagination } from '../common/pagination.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateQuestionDto, UpdateQuestionDto } from './questions.dto.js';
 
@@ -33,11 +34,14 @@ export class QuestionsService {
     });
   }
 
-  async findAll(filters?: {
-    course?: Course;
-    level?: Level;
-    difficulty?: Difficulty;
-  }) {
+  async findAll(
+    filters?: {
+      course?: Course;
+      level?: Level;
+      difficulty?: Difficulty;
+    },
+    pagination?: Pagination,
+  ) {
     return this.prisma.question.findMany({
       where: {
         ...(filters?.course ? { course: filters.course } : {}),
@@ -51,6 +55,7 @@ export class QuestionsService {
         { level: 'asc' },
         { createdAt: 'desc' },
       ],
+      ...pagination,
     });
   }
 

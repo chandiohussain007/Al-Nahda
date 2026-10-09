@@ -7,6 +7,7 @@ const GIS_SRC = 'https://accounts.google.com/gsi/client';
 interface Props {
   /** Receives the raw Google ID token (the `credential` field). */
   onCredential: (idToken: string) => void;
+  onError?: (error: Error) => void;
 }
 
 function loadGisScript(): Promise<void> {
@@ -38,13 +39,18 @@ function loadGisScript(): Promise<void> {
  * The backend verifies this token against Google's tokeninfo endpoint, so the
  * client id here must be the same one configured as GOOGLE_CLIENT_ID on Render.
  */
-export default function GoogleSignInButton({ onCredential }: Props) {
+export default function GoogleSignInButton({ onCredential, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onCredential);
+  const errorCallbackRef = useRef(onError);
 
   useEffect(() => {
     callbackRef.current = onCredential;
   }, [onCredential]);
+
+  useEffect(() => {
+    errorCallbackRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -67,8 +73,12 @@ export default function GoogleSignInButton({ onCredential }: Props) {
           width: 320,
         });
       })
-      .catch(() => {
-        // Surfaced by the parent through its own error message.
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          errorCallbackRef.current?.(
+            error instanceof Error ? error : new Error('Could not load Google Sign-In'),
+          );
+        }
       });
 
     return () => {

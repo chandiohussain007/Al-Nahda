@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import {
   ListEnrollmentsQueryDto,
+  ListStudentsQueryDto,
   ListTeachersQueryDto,
   ResolveFeeDto,
   SetCvDto,
@@ -34,7 +35,10 @@ export class AdminController {
   @Get('teachers')
   @ApiOperation({ summary: 'List teacher profiles with their approval status' })
   listTeachers(@Query() query: ListTeachersQueryDto) {
-    return this.adminService.listTeachers(query.status);
+    return this.adminService.listTeachers(query.status, {
+      skip: query.skip,
+      take: query.take,
+    });
   }
 
   @Patch('teachers/:id/approve')
@@ -51,8 +55,8 @@ export class AdminController {
 
   @Get('students')
   @ApiOperation({ summary: 'List student profiles' })
-  listStudents() {
-    return this.adminService.listStudents();
+  listStudents(@Query() query: ListStudentsQueryDto) {
+    return this.adminService.listStudents({ skip: query.skip, take: query.take });
   }
 
   @Get('students/:id')
@@ -64,7 +68,10 @@ export class AdminController {
   @Get('enrollments')
   @ApiOperation({ summary: 'List enrollment requests' })
   listEnrollments(@Query() query: ListEnrollmentsQueryDto) {
-    return this.adminService.listEnrollments(query.status);
+    return this.adminService.listEnrollments(query.status, {
+      skip: query.skip,
+      take: query.take,
+    });
   }
 
   @Patch('enrollments/:id/approve')

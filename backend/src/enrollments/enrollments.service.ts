@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EnrollmentStatus, FeeStatus, Level, UserRole } from '@prisma/client';
 import { stripTeacherPrivacy } from '../common/privacy.js';
+import type { Pagination } from '../common/pagination.dto.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StudentsService } from '../students/students.service.js';
@@ -129,7 +130,7 @@ export class EnrollmentsService {
     return updated;
   }
 
-  async list(userId: string, role: UserRole) {
+  async list(userId: string, role: UserRole, pagination?: Pagination) {
     if (role === UserRole.STUDENT) {
       const student = await this.studentsService.getProfile(userId);
 
@@ -137,6 +138,7 @@ export class EnrollmentsService {
         where: { studentId: student.id },
         include: { teacher: { select: { id: true, fullName: true } } },
         orderBy: { createdAt: 'desc' },
+        ...pagination,
       });
     }
 
@@ -146,6 +148,7 @@ export class EnrollmentsService {
       where: { teacherId: teacher.id },
       include: { student: { select: { id: true, fullName: true, whatsappNumber: true } } },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 

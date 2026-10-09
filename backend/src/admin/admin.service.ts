@@ -7,6 +7,7 @@ import {
 import { EnrollmentStatus, FeeStatus, TeacherStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { Pagination } from '../common/pagination.dto.js';
 import { ResolveFeeDto } from './admin.dto.js';
 
 const USER_SUMMARY_SELECT = {
@@ -23,11 +24,12 @@ export class AdminService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  listTeachers(status?: TeacherStatus) {
+  listTeachers(status?: TeacherStatus, pagination?: Pagination) {
     return this.prisma.teacherProfile.findMany({
       where: status ? { teacherStatus: status } : {},
       include: { user: { select: USER_SUMMARY_SELECT } },
       orderBy: { fullName: 'asc' },
+      ...pagination,
     });
   }
 
@@ -50,10 +52,11 @@ export class AdminService {
     return updated;
   }
 
-  listStudents() {
+  listStudents(pagination?: Pagination) {
     return this.prisma.studentProfile.findMany({
       include: { user: { select: USER_SUMMARY_SELECT } },
       orderBy: { fullName: 'asc' },
+      ...pagination,
     });
   }
 
@@ -77,7 +80,7 @@ export class AdminService {
     return student;
   }
 
-  listEnrollments(status?: EnrollmentStatus) {
+  listEnrollments(status?: EnrollmentStatus, pagination?: Pagination) {
     return this.prisma.enrollment.findMany({
       where: status ? { status } : {},
       include: {
@@ -85,6 +88,7 @@ export class AdminService {
         teacher: { select: { id: true, fullName: true, userId: true } },
       },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 

@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { ListApprovedTeachersQueryDto } from './teachers.dto.js';
 import { TeachersService } from './teachers.service.js';
 
 /**
@@ -17,8 +18,10 @@ export class TeachersDirectoryController {
 
   @Get()
   @ApiOperation({ summary: 'List approved teachers (enrollment picker)' })
-  @ApiQuery({ name: 'timeSlot', required: false })
-  listApproved(@Query('timeSlot') timeSlot?: string) {
-    return this.teachersService.listApproved(timeSlot);
+  listApproved(@Query() query: ListApprovedTeachersQueryDto) {
+    return this.teachersService.listApproved(query.timeSlot, {
+      skip: query.skip,
+      take: query.take,
+    });
   }
 }

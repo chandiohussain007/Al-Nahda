@@ -1,6 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength } from 'class-validator';
 
 export class GoogleLoginDto {
   @ApiProperty({
@@ -9,13 +8,4 @@ export class GoogleLoginDto {
   @IsString()
   @MinLength(20)
   idToken: string;
-
-  @ApiPropertyOptional({
-    enum: [UserRole.STUDENT, UserRole.TEACHER],
-    description:
-      'Requested role. Defaults to STUDENT when omitted. ADMIN is never accepted here.',
-  })
-  @IsOptional()
-  @IsIn([UserRole.STUDENT, UserRole.TEACHER])
-  role?: UserRole;
 }

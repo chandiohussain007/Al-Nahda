@@ -61,6 +61,23 @@ const questions = [
   },
 ];
 
+// Courses for the assessment/enrollment module. `slug` is unique, so these
+// upserts are idempotent — re-running the seed never duplicates rows.
+const courses = [
+  {
+    name: 'Learn Quran',
+    slug: 'learn-quran',
+    description: 'Master Quran recitation from Noorani Qaida to full Hifz.',
+    levels: ['Beginner', 'Intermediate', 'Advanced'],
+  },
+  {
+    name: 'Learn Arabic',
+    slug: 'learn-arabic',
+    description: 'Classical Arabic from basics to understanding the Quran directly.',
+    levels: ['Beginner', 'Intermediate', 'Advanced'],
+  },
+];
+
 async function main() {
   for (const question of questions) {
     const existing = await prisma.evaluationQuestion.findFirst({
@@ -73,6 +90,40 @@ async function main() {
   }
 
   console.log(`Seeded ${questions.length} evaluation questions.`);
+
+  // ── CourseItem + LevelContent (assessment/enrollment module) ─────────────
+  // The student enrollment flow validates `courseId` as a UUID against
+  // PUBLISHED CourseItem rows, so these must exist before a student can apply.
+  for (const course of courses) {
+    const created = await prisma.courseItem.upsert({
+      where: { slug: course.slug },
+      create: {
+        name: course.name,
+        slug: course.slug,
+        description: course.description,
+        status: 'PUBLISHED',
+      },
+      update: {},
+    });
+
+    for (const [index, level] of course.levels.entries()) {
+      const existingLevel = await prisma.levelContent.findFirst({
+        where: { courseId: created.id, name: level },
+      });
+
+      if (!existingLevel) {
+        await prisma.levelContent.create({
+          data: {
+            courseId: created.id,
+            name: level,
+            sortOrder: index,
+          },
+        });
+      }
+    }
+  }
+
+  console.log(`Seeded ${courses.length} courses with levels.`);
 }
 
 main()

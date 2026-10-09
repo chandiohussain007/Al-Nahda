@@ -6,7 +6,6 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export interface UpsertUserInput {
   email: string;
   googleId: string;
-  role?: UserRole;
 }
 
 @Injectable()
@@ -30,27 +29,31 @@ export class UsersService {
    * so a client can never request admin access through Google login.
    */
   isAdminEmail(email: string): boolean {
-    const adminEmails = (this.configService.get<string>('ADMIN_EMAILS') ?? '')
+    return this.configuredEmails('ADMIN_EMAILS').includes(email.trim().toLowerCase());
+  }
+
+  private isTeacherEmail(email: string): boolean {
+    // Teacher role assignment is server-controlled and never comes from the client.
+    return this.configuredEmails('TEACHER_EMAILS').includes(email.trim().toLowerCase());
+  }
+
+  private configuredEmails(key: string): string[] {
+    return (this.configService.get<string>(key) ?? '')
       .split(',')
       .map((value) => value.trim().toLowerCase())
       .filter((value) => value.length > 0);
-
-    return adminEmails.includes(email.trim().toLowerCase());
   }
 
   async upsertFromGoogle(input: UpsertUserInput): Promise<User> {
-    const requestedRole = this.resolveRequestedRole(input.role);
     const isAdmin = this.isAdminEmail(input.email);
+    const isTeacher = this.isTeacherEmail(input.email);
+    const role = isAdmin ? UserRole.ADMIN : isTeacher ? UserRole.TEACHER : UserRole.STUDENT;
 
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ googleId: input.googleId }, { email: input.email }] },
     });
 
     if (existing) {
-      // Existing roles are preserved to prevent self-escalation. The only
-      // exception is granting ADMIN to an email in ADMIN_EMAILS.
-      const role = isAdmin ? UserRole.ADMIN : existing.role;
-
       return this.prisma.user.update({
         where: { id: existing.id },
         data: { email: input.email, googleId: input.googleId, role },
@@ -61,13 +64,8 @@ export class UsersService {
       data: {
         email: input.email,
         googleId: input.googleId,
-        role: isAdmin ? UserRole.ADMIN : requestedRole,
+        role,
       },
     });
-  }
-
-  private resolveRequestedRole(role?: UserRole): UserRole {
-    // ADMIN can never be requested by a client.
-    return role === UserRole.TEACHER ? UserRole.TEACHER : UserRole.STUDENT;
   }
 }

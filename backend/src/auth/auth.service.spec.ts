@@ -46,7 +46,6 @@ describe('AuthService', () => {
     expect(usersServiceMock.upsertFromGoogle).toHaveBeenCalledWith({
       email: 'student@example.com',
       googleId: 'google-1',
-      role: undefined,
     });
     expect(jwtServiceMock.sign).toHaveBeenCalledWith({
       sub: 'user-1',

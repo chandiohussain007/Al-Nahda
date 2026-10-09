@@ -2,27 +2,40 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiErrorMessage, applyForEnrollment, fetchMyStudentEnrollments, fetchStudentProfile } from '@/lib/api';
-import type { StudentEnrollmentRecord, StudentProfile } from '@/lib/types';
+import Link from 'next/link';
+import Button from '@/components/ui/Button';
+import CourseCard from '@/components/domain/CourseCard';
+import StatusBadge from '@/components/data-display/StatusBadge';
+import DataTable, { type Column } from '@/components/data-display/DataTable';
+import ErrorCard from '@/components/feedback/ErrorCard';
+import EmptyState from '@/components/feedback/EmptyState';
+import SkeletonLoader from '@/components/feedback/SkeletonLoader';
+import {
+  apiErrorMessage,
+  applyForEnrollment,
+  fetchCourses,
+  fetchMyStudentEnrollments,
+  fetchStudentProfile,
+} from '@/lib/api';
+import type { CourseItem, StudentEnrollmentRecord, StudentProfile } from '@/lib/types';
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#f59e0b',
-  IN_PROGRESS: '#3b82f6',
-  ASSESSMENT_REQUIRED: '#8b5cf6',
-  ASSESSMENT_COMPLETED: '#06b6d4',
-  APPROVED: '#10b981',
-  ACTIVE: '#10b981',
-  REJECTED: '#ef4444',
-  COMPLETED: '#6b7280',
+/** Presentation fallbacks keyed by slug; API data wins when present. */
+const COURSE_DETAILS: Record<string, { label: string; description: string; icon: string }> = {
+  'learn-quran': {
+    label: 'Learn Quran',
+    description: 'Master Quran recitation from Noorani Qaida to full Hifz.',
+    icon: '📖',
+  },
+  'learn-arabic': {
+    label: 'Learn Arabic',
+    description: 'Classical Arabic from basics to understanding the Quran directly.',
+    icon: '🌙',
+  },
 };
-
-const COURSES = [
-  { id: 'learn-quran', label: '📖 Learn Quran', description: 'Master Quran recitation from Noorani Qaida to full Hifz.' },
-  { id: 'learn-arabic', label: '🌙 Learn Arabic', description: 'Classical Arabic from basics to understanding the Quran directly.' },
-];
 
 export default function StudentCoursesPage() {
   const router = useRouter();
+  const [courses, setCourses] = useState<CourseItem[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [enrollments, setEnrollments] = useState<StudentEnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +43,11 @@ export default function StudentCoursesPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Courses load independently: a missing profile must not blank the catalog.
+    fetchCourses()
+      .then(setCourses)
+      .catch((err) => setError(apiErrorMessage(err, 'Could not load courses')));
+
     fetchStudentProfile()
       .then((p) => {
         setProfile(p);
@@ -43,19 +61,18 @@ export default function StudentCoursesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const enrolledCourseIds = new Set(
+  const enrolledCourseSlugs = new Set(
     enrollments
       .filter((e) => !['REJECTED', 'COMPLETED'].includes(e.status))
       .map((e) => e.course?.slug),
   );
 
-  async function handleApply(slug: string) {
-    setApplying(slug);
+  async function handleApply(course: CourseItem) {
+    setApplying(course.id);
     setError('');
     try {
-      // We send the slug as applicationData since we don't have CourseItem IDs seeded yet.
-      // When CourseItems are seeded, swap this to a real courseId lookup.
-      const res = await applyForEnrollment({ courseId: slug, applicationData: slug });
+      // course.id is the real CourseItem UUID the DTO validates.
+      const res = await applyForEnrollment({ courseId: course.id, applicationData: course.slug });
       setEnrollments((prev) => [res, ...prev]);
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -64,113 +81,147 @@ export default function StudentCoursesPage() {
     }
   }
 
+  const examLink = (assessmentId: string, enrollmentId: string) =>
+    `/dashboard/student/exam?assessmentId=${assessmentId}&enrollmentId=${enrollmentId}`;
+
+  const enrollmentColumns: Column<StudentEnrollmentRecord>[] = [
+    { key: 'course', header: 'Course', render: (e) => e.course?.name ?? '—' },
+    { key: 'level', header: 'Level', secondary: true, render: (e) => e.selectedLevel?.name ?? '—' },
+    { key: 'status', header: 'Status', render: (e) => <StatusBadge status={e.status} /> },
+    {
+      key: 'assessment',
+      header: 'Assigned Exam',
+      secondary: true,
+      render: (e) =>
+        e.assignedAssessment ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => router.push(examLink(e.assignedAssessment!.id, e.id))}
+          >
+            {e.assignedAssessment.title}
+          </Button>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+    {
+      key: 'createdAt',
+      header: 'Applied',
+      secondary: true,
+      render: (e) => (
+        <span className="text-slate-500 dark:text-gold-light/70">
+          {new Date(e.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className="courses-page">
-      <h1>Courses</h1>
-      <p className="muted">Choose a course to start your learning journey.</p>
+    <div className="space-y-8">
+      <header>
+        <h1 className="m-0 font-serif text-2xl font-bold text-primary dark:text-gold">Courses</h1>
+        <p className="mt-1 text-sm text-slate-600 dark:text-gold-light/80">
+          Choose a course to start your learning journey.
+        </p>
+      </header>
 
-      {error && <p className="error-banner">{error}</p>}
-      {!profile && <p className="error-banner">You must create your profile in the Dashboard first to apply for courses.</p>}
+      {error && <ErrorCard message={error} className="mb-4" />}
+      {!profile && !loading && (
+        <ErrorCard
+          title="Profile required"
+          message="Create your profile on the dashboard before applying for courses."
+          className="mb-4"
+        />
+      )}
 
-      <div className="course-grid">
-        {COURSES.map((course) => {
-          const enrolled = enrolledCourseIds.has(course.id);
-          const myEnrollment = enrollments.find((e) => e.course?.slug === course.id);
+      <section>
+        <h2 className="m-0 mb-3 font-serif text-lg font-semibold text-primary dark:text-gold">
+          Available Courses
+        </h2>
+        {loading ? (
+          <SkeletonLoader rows={2} height="h-40" />
+        ) : courses.length === 0 ? (
+          <EmptyState
+            icon="📚"
+            title="No courses yet"
+            description="New courses are added regularly. Please check back soon."
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {courses.map((course) => {
+              const details = COURSE_DETAILS[course.slug];
+              const label = details?.label ?? course.name;
+              const description = details?.description ?? course.description ?? '';
+              const icon = details?.icon ?? '📖';
+              const enrolled = enrolledCourseSlugs.has(course.slug);
+              const myEnrollment = enrollments.find((e) => e.course?.slug === course.slug);
+              const needsExam =
+                myEnrollment?.status === 'ASSESSMENT_REQUIRED' && myEnrollment.assignedAssessment;
 
-          return (
-            <div key={course.id} className="course-card">
-              <h2>{course.label}</h2>
-              <p>{course.description}</p>
-
-              {myEnrollment && (
-                <span
-                  className="status-badge"
-                  style={{ background: STATUS_COLORS[myEnrollment.status] ?? '#6b7280' }}
-                >
-                  {myEnrollment.status.replace(/_/g, ' ')}
-                </span>
-              )}
-
-              {myEnrollment?.assignedAssessment && myEnrollment.status === 'ASSESSMENT_REQUIRED' && (
-                <button
-                  className="btn-primary"
-                  onClick={() =>
-                    router.push(
-                      `/dashboard/student/exam?assessmentId=${myEnrollment.assignedAssessment!.id}&enrollmentId=${myEnrollment.id}`,
-                    )
+              return (
+                <CourseCard
+                  key={course.id}
+                  title={label}
+                  description={description}
+                  icon={icon}
+                  actionLabel={
+                    needsExam ? 'Take Placement Exam' : enrolled ? undefined : 'Apply Now'
                   }
+                  actionDisabled={applying === course.id || !profile}
+                  onAction={() => {
+                    if (needsExam && myEnrollment) {
+                      router.push(examLink(myEnrollment.assignedAssessment!.id, myEnrollment.id));
+                    } else {
+                      void handleApply(course);
+                    }
+                  }}
                 >
-                  Take Placement Exam →
-                </button>
-              )}
-
-              {!enrolled && (
-                <button
-                  className="btn-primary"
-                  disabled={applying === course.id || !profile}
-                  onClick={() => handleApply(course.id)}
-                >
-                  {applying === course.id ? 'Applying…' : 'Apply Now'}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {loading ? (
-        <p className="muted">Loading your enrollments…</p>
-      ) : enrollments.length > 0 ? (
-        <>
-          <h2 style={{ marginTop: '2.5rem' }}>My Enrollments</h2>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Course</th>
-                  <th>Level</th>
-                  <th>Status</th>
-                  <th>Assigned Exam</th>
-                  <th>Applied</th>
-                </tr>
-              </thead>
-              <tbody>
-                {enrollments.map((e) => (
-                  <tr key={e.id}>
-                    <td>{e.course?.name ?? '—'}</td>
-                    <td>{e.selectedLevel?.name ?? '—'}</td>
-                    <td>
-                      <span
-                        className="status-badge"
-                        style={{ background: STATUS_COLORS[e.status] ?? '#6b7280' }}
-                      >
-                        {e.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td>
-                      {e.assignedAssessment ? (
-                        <button
-                          className="btn-sm"
-                          onClick={() =>
-                            router.push(
-                              `/dashboard/student/exam?assessmentId=${e.assignedAssessment!.id}&enrollmentId=${e.id}`,
-                            )
-                          }
-                        >
-                          {e.assignedAssessment.title}
-                        </button>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="muted">{new Date(e.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  {myEnrollment && (
+                    <div className="pt-1">
+                      <StatusBadge status={myEnrollment.status} />
+                    </div>
+                  )}
+                  {applying === course.id && (
+                    <span className="text-xs text-slate-500 dark:text-gold-light/70">
+                      Applying…
+                    </span>
+                  )}
+                </CourseCard>
+              );
+            })}
           </div>
-        </>
-      ) : null}
+        )}
+      </section>
+
+      <section>
+        <h2 className="m-0 mb-3 font-serif text-lg font-semibold text-primary dark:text-gold">
+          My Enrollments
+        </h2>
+        {loading ? (
+          <SkeletonLoader rows={3} height="h-12" />
+        ) : enrollments.length === 0 ? (
+          <EmptyState
+            icon="🗂️"
+            title="No enrollments yet"
+            description="Apply for a course above and your enrollment will appear here."
+            action={
+              <Link href="/dashboard/student">
+                <Button variant="ghost" size="sm">
+                  Go to dashboard
+                </Button>
+              </Link>
+            }
+          />
+        ) : (
+          <DataTable
+            columns={enrollmentColumns}
+            rows={enrollments}
+            caption="My course enrollments"
+            empty={<EmptyState title="No enrollments" description="Apply for a course to get started." />}
+          />
+        )}
+      </section>
     </div>
   );
 }

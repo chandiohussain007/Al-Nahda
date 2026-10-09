@@ -27,11 +27,18 @@ Copy `.env.example` to `.env` and provide:
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (server-side only) |
 | `GOOGLE_REDIRECT_URI` | Google OAuth redirect URI |
 | `ADMIN_EMAILS` | Comma-separated Google emails automatically granted the `ADMIN` role |
+| `TEACHER_EMAILS` | Comma-separated Google emails automatically granted the `TEACHER` role |
+| `ADMIN_EMAIL` | Recipient for public student registrations and teacher applications |
+| `RESEND_API_KEY` | Resend API key used to deliver public applications |
+| `RESEND_FROM_EMAIL` | Verified sender identity configured in Resend |
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins (empty = reflect request origin) |
 
 In `NODE_ENV=production` the app fails fast at boot if `DATABASE_URL`,
 `JWT_SECRET` or `GOOGLE_CLIENT_ID` are missing, if `JWT_SECRET` is weak/default,
 or if `PORT` is not numeric (see `src/config/env.validation.ts`).
+Configure `TEACHER_EMAILS` and `ADMIN_EMAILS` in the backend deployment to
+assign portal roles automatically. Student registration and teacher application
+emails require a Resend API key, a verified sender, and an `ADMIN_EMAIL`.
 Prisma also requires `DIRECT_URL` for schema validation and migrations. When
 using a pooled database URL, configure this as the database provider's direct,
 non-pooler connection string.
@@ -74,6 +81,12 @@ connection URI rather than a pooler URI).
 
 JWT payload: `{ sub, email, role }` where `role` is `STUDENT`, `TEACHER` or `ADMIN`.
 
+The role is assigned from the verified email on the backend. Addresses in
+`ADMIN_EMAILS` receive `ADMIN` (taking precedence); addresses in
+`TEACHER_EMAILS` receive `TEACHER`; all other new accounts receive `STUDENT`.
+There is no role selector in the public login flow. Set the allow-lists in the
+backend deployment environment before those users sign in.
+
 ## Roles, admin access and teacher approval
 
 - `JwtAuthGuard` validates the bearer token and populates `request.user`.
@@ -84,17 +97,17 @@ JWT payload: `{ sub, email, role }` where `role` is `STUDENT`, `TEACHER` or `ADM
 
 **Privilege-escalation safety**
 
-- A client can only request `STUDENT` or `TEACHER` at login (`ADMIN` is rejected
-  by the DTO).
 - `ADMIN` is granted **only** when the verified Google email is listed in
   `ADMIN_EMAILS`.
-- Existing roles are never auto-upgraded on later logins (except the admin
-  bootstrap above).
+- `TEACHER` is granted only when the verified email is listed in `TEACHER_EMAILS`.
+- Every login recalculates the role from the server-side allow-lists, so a
+  removed address cannot keep an old privileged role; role selection is never
+  accepted from the client.
 
 **Teacher approval workflow**
 
 ```
-Google login (role: TEACHER)
+Google login (email listed in `TEACHER_EMAILS`)
         ↓
 Teacher creates profile → teacherStatus = PENDING
         ↓
@@ -107,6 +120,14 @@ While `PENDING`, a teacher can still read/update their own profile so they can
 submit their application, but cannot use teacher features.
 
 ## API routes
+
+### Public applications
+
+`POST /api/public/student-registration` emails a course-interest registration
+request to `ADMIN_EMAIL`. `POST /api/public/teacher-application` emails a
+teacher's name, email, contact number, teaching subjects, and experience.
+Both routes use Resend and require `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and
+`ADMIN_EMAIL`; requests are rate-limited.
 
 ### Auth
 

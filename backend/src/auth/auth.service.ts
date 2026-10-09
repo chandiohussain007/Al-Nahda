@@ -31,7 +31,6 @@ export class AuthService {
     const user = await this.usersService.upsertFromGoogle({
       email: profile.email,
       googleId: profile.googleId,
-      role: dto.role,
     });
 
     return {

@@ -9,16 +9,18 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { StudentEnrollmentStatus, UserRole } from '@prisma/client';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
 import { ResolveFeeDto } from '../admin/admin.dto.js';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
 import {
   CreateStudentEnrollmentDto,
+  ListStudentEnrollmentsQueryDto,
   UpdateEnrollmentStatusDto,
 } from './student-enrollments.dto.js';
 import { StudentEnrollmentsService } from './student-enrollments.service.js';
@@ -40,16 +42,15 @@ export class StudentEnrollmentsController {
   @Get('mine')
   @Roles(UserRole.STUDENT)
   @ApiOperation({ summary: 'List my own enrollment applications' })
-  listMine(@CurrentUser() user: AuthenticatedUser) {
-    return this.service.listMine(user.sub);
+  listMine(@CurrentUser() user: AuthenticatedUser, @Query() query: PaginationQueryDto) {
+    return this.service.listMine(user.sub, { skip: query.skip, take: query.take });
   }
 
   @Get()
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Admin: list all enrollments' })
-  @ApiQuery({ name: 'status', enum: StudentEnrollmentStatus, required: false })
-  listAll(@Query('status') status?: StudentEnrollmentStatus) {
-    return this.service.listAll(status);
+  listAll(@Query() query: ListStudentEnrollmentsQueryDto) {
+    return this.service.listAll(query.status, { skip: query.skip, take: query.take });
   }
 
   @Get(':id')

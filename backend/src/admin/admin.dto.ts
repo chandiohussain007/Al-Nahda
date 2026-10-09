@@ -1,15 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EnrollmentStatus, TeacherStatus } from '@prisma/client';
 import { IsEnum, IsInt, IsOptional, IsUrl, Max, Min } from 'class-validator';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
 
-export class ListTeachersQueryDto {
+export class ListTeachersQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: TeacherStatus, description: 'Filter teachers by approval status' })
   @IsOptional()
   @IsEnum(TeacherStatus)
   status?: TeacherStatus;
 }
 
-export class ListEnrollmentsQueryDto {
+export class ListStudentsQueryDto extends PaginationQueryDto {}
+
+export class ListEnrollmentsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: EnrollmentStatus, description: 'Filter enrollments by status' })
   @IsOptional()
   @IsEnum(EnrollmentStatus)

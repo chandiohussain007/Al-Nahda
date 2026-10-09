@@ -2,40 +2,45 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import RequireRole from '@/components/RequireRole';
-import StatusBadge from '@/components/StatusBadge';
 import Link from 'next/link';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Select from '@/components/ui/Select';
+import StatCard from '@/components/data-display/StatCard';
+import StatusBadge from '@/components/data-display/StatusBadge';
+import DataTable, { type Column } from '@/components/data-display/DataTable';
+import EmptyState from '@/components/feedback/EmptyState';
+import SkeletonLoader from '@/components/feedback/SkeletonLoader';
+import ErrorCard from '@/components/feedback/ErrorCard';
+import { useToast } from '@/components/feedback/Toast';
+import { LayoutDashboard, Users, GraduationCap, ClipboardList, BookOpen, Settings } from 'lucide-react';
 import {
   apiErrorMessage,
-  approveEnrollment,
-  approveEnrollmentFee,
   approveTeacher,
   clearProfilePicture,
   clearTeacherCv,
   fetchAdminEnrollments,
   fetchAdminStudents,
   fetchAdminTeachers,
-  rejectEnrollment,
-  rejectEnrollmentFee,
   rejectTeacher,
   setProfilePicture,
   setTeacherCv,
 } from '@/lib/api';
 import {
-  ENROLLMENT_STATUSES,
   TEACHER_STATUSES,
   type Enrollment,
-  type EnrollmentStatus,
   type StudentProfile,
   type TeacherProfile,
   type TeacherStatus,
 } from '@/lib/types';
 
-const FEE_COLORS: Record<string, string> = {
-  NONE: '#6b7280',
-  PROPOSED: '#f59e0b',
-  AGREED: '#10b981',
-  REJECTED: '#ef4444',
-};
+type TabKey = 'overview' | 'teachers' | 'students';
+
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
+  { key: 'teachers', label: 'Teachers', icon: <Users className="h-4 w-4" /> },
+  { key: 'students', label: 'Students', icon: <GraduationCap className="h-4 w-4" /> },
+];
 
 export default function AdminPage() {
   return (
@@ -46,15 +51,18 @@ export default function AdminPage() {
 }
 
 function AdminDashboard() {
+  const { toast: showToast } = useToast();
+  const [tab, setTab] = useState<TabKey>('overview');
+
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+
   const [teacherFilter, setTeacherFilter] = useState<TeacherStatus | ''>('');
-  const [enrollmentFilter, setEnrollmentFilter] = useState<EnrollmentStatus | ''>('');
+
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,7 +70,7 @@ function AdminDashboard() {
       const [teacherRows, studentRows, enrollmentRows] = await Promise.all([
         fetchAdminTeachers(teacherFilter || undefined),
         fetchAdminStudents(),
-        fetchAdminEnrollments(enrollmentFilter || undefined),
+        fetchAdminEnrollments(),
       ]);
       setTeachers(teacherRows);
       setStudents(studentRows);
@@ -73,7 +81,7 @@ function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [teacherFilter, enrollmentFilter]);
+  }, [teacherFilter]);
 
   useEffect(() => {
     void load();
@@ -81,11 +89,10 @@ function AdminDashboard() {
 
   const act = async (message: string, run: () => Promise<unknown>) => {
     setBusy(true);
-    setNotice(null);
     setError(null);
     try {
       await run();
-      setNotice(message);
+      showToast(message, 'success');
       await load();
     } catch (e) {
       setError(apiErrorMessage(e, 'Action failed'));
@@ -93,28 +100,6 @@ function AdminDashboard() {
       setBusy(false);
     }
   };
-
-  async function approveFeeWithPrompt(e: Enrollment) {
-    const input = window.prompt(
-      'Agreed fee (leave blank to accept the proposed amount):',
-      e.proposedFee === null ? '' : String(e.proposedFee),
-    );
-    if (input === null) return;
-
-    const trimmed = input.trim();
-    const agreedFee = trimmed === '' ? undefined : Number(trimmed);
-    if (agreedFee !== undefined && (!Number.isFinite(agreedFee) || agreedFee < 0)) {
-      setError('Enter a valid fee amount.');
-      return;
-    }
-
-    await act('Fee agreed.', () => approveEnrollmentFee(e.id, agreedFee));
-  }
-
-  async function rejectFeeWithPrompt(e: Enrollment) {
-    if (!window.confirm('Reject the proposed fee?')) return;
-    await act('Fee rejected.', () => rejectEnrollmentFee(e.id));
-  }
 
   /** Admin media moderation: paste a direct web link, or blank to clear. */
   async function changePicture(userId: string | undefined, name: string) {
@@ -141,168 +126,260 @@ function AdminDashboard() {
     );
   }
 
-  return (
-    <>
-      <h1>Admin</h1>
-      {error && <div className="error">{error}</div>}
-      {notice && <div className="notice">{notice}</div>}
-      {loading && <p className="muted">Loading…</p>}
-
-      <div className="card">
-        <div className="row">
-          <h2>Teachers ({teachers.length})</h2>
-          <span className="spacer" />
-          <label style={{ margin: 0 }}>
-            Filter{' '}
-            <select
-              value={teacherFilter}
-              onChange={(e) => setTeacherFilter(e.target.value as TeacherStatus | '')}
-            >
-              <option value="">All</option>
-              {TEACHER_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Subjects</th>
-              <th>Experience</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teachers.map((t) => (
-              <tr key={t.id}>
-                <td>{t.fullName}</td>
-                <td>{t.user?.email ?? '—'}</td>
-                <td>{t.phoneNumber ?? '—'}</td>
-                <td>{t.subjectsTaught.join(', ') || '—'}</td>
-                <td>{t.experienceYears} yrs</td>
-                <td>
-                  <StatusBadge status={t.teacherStatus} />
-                </td>
-                <td>
-                  <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-                    {t.teacherStatus === 'PENDING' && (
-                      <>
-                        <button
-                          type="button"
-                          className="success"
-                          disabled={busy}
-                          onClick={() =>
-                            void act('Teacher approved.', () => approveTeacher(t.id))
-                          }
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="danger"
-                          disabled={busy}
-                          onClick={() =>
-                            void act('Teacher rejected.', () => rejectTeacher(t.id))
-                          }
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      className="btn-sm"
-                      disabled={busy || !t.userId}
-                      onClick={() => void changePicture(t.userId, t.fullName)}
-                    >
-                      Picture
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-sm"
-                      disabled={busy || !t.userId}
-                      onClick={() => void changeCv(t.userId, t.fullName)}
-                    >
-                      CV
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!loading && teachers.length === 0 && (
-              <tr>
-                <td colSpan={7} className="muted">
-                  No teachers match this filter.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+  if (loading && tab === 'overview') {
+    return (
+      <div className="space-y-6">
+        <SkeletonLoader rows={1} height="h-10" />
+        <SkeletonLoader rows={2} height="h-32" />
       </div>
+    );
+  }
 
-      <div className="card">
-        <div className="row">
-          <h2>Enrollments ({enrollments.length} legacy)</h2>
-          <span className="spacer" />
-          <Link href="/dashboard/admin/enrollments">
-            <button className="primary">Manage All Enrollments →</button>
+  const pendingTeachersCount = teachers.filter(t => t.teacherStatus === 'PENDING').length;
+
+  const teacherColumns: Column<TeacherProfile>[] = [
+    { key: 'name', header: 'Name', render: (t) => <div className="font-medium text-primary dark:text-ivory">{t.fullName}</div> },
+    { key: 'email', header: 'Email', render: (t) => <div className="text-sm text-slate-500">{t.user?.email ?? '—'}</div> },
+    { key: 'phone', header: 'Phone', secondary: true, render: (t) => t.phoneNumber ?? '—' },
+    { key: 'subjects', header: 'Subjects', secondary: true, render: (t) => t.subjectsTaught.join(', ') || '—' },
+    { key: 'exp', header: 'Experience', secondary: true, render: (t) => `${t.experienceYears} yrs` },
+    { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.teacherStatus ?? 'PENDING'} /> },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (t) => (
+        <div className="flex flex-wrap gap-2">
+          {t.teacherStatus === 'PENDING' && (
+            <>
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={busy}
+                onClick={() => void act('Teacher approved.', () => approveTeacher(t.id))}
+              >
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={busy}
+                onClick={() => void act('Teacher rejected.', () => rejectTeacher(t.id))}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy || !t.userId}
+            onClick={() => void changePicture(t.userId, t.fullName)}
+          >
+            Pic
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy || !t.userId}
+            onClick={() => void changeCv(t.userId, t.fullName)}
+          >
+            CV
+          </Button>
+        </div>
+      )
+    }
+  ];
+
+  const studentColumns: Column<StudentProfile>[] = [
+    { key: 'name', header: 'Name', render: (s) => <div className="font-medium text-primary dark:text-ivory">{s.fullName}</div> },
+    { key: 'email', header: 'Email', render: (s) => <div className="text-sm text-slate-500">{s.user?.email ?? '—'}</div> },
+    { key: 'joined', header: 'Joined', secondary: true, render: (s) => new Date(s.user?.createdAt ?? '').toLocaleDateString() },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (s) => (
+        <div className="flex items-center gap-2">
+          <Link href={`/dashboard/admin/students/${s.id}`}>
+            <Button size="sm" variant="secondary">View</Button>
           </Link>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy || !s.userId}
+            onClick={() => void changePicture(s.userId, s.fullName)}
+          >
+            Picture
+          </Button>
         </div>
-        <p className="muted">
-          Enrollment management has moved to a dedicated page for the new workflow. 
-          Use the button above to manage them.
-        </p>
+      )
+    }
+  ];
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="m-0 font-serif text-2xl font-bold text-primary dark:text-gold">
+            Admin Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-gold-light/80">
+            Platform overview and user management.
+          </p>
+        </div>
+      </header>
+
+      {error && <ErrorCard message={error} />}
+
+      <div className="flex space-x-1 overflow-x-auto rounded-xl bg-sandstone/20 p-1 dark:bg-primary/30">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+              tab === t.key
+                ? 'bg-white text-teal shadow-sm dark:bg-teal dark:text-white'
+                : 'text-slate-600 hover:bg-white/50 hover:text-charcoal dark:text-gold-light/70 dark:hover:bg-primary/60 dark:hover:text-gold'
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="card">
-        <h2>Students ({students.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Joined</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.id}>
-                <td>{s.fullName}</td>
-                <td>{s.user?.email ?? '—'}</td>
-                <td className="muted">{new Date(s.user?.createdAt ?? '').toLocaleDateString()}</td>
-                <td>
-                  <Link href={`/dashboard/admin/students/${s.id}`}>View</Link>
-                  {' · '}
-                  <button
-                    type="button"
-                    className="btn-sm"
-                    disabled={busy || !s.userId}
-                    onClick={() => void changePicture(s.userId, s.fullName)}
-                  >
-                    Picture
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {!loading && students.length === 0 && (
-              <tr>
-                <td colSpan={4} className="muted">
-                  No students yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="mt-6">
+        {tab === 'overview' && (
+          <div className="space-y-8">
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Total Students"
+                value={students.length}
+                caption="Registered student profiles"
+              />
+              <StatCard
+                label="Total Teachers"
+                value={teachers.length}
+                caption="Approved and active instructors"
+              />
+              <StatCard
+                label="Pending Teachers"
+                value={pendingTeachersCount}
+                caption="Waiting for approval"
+              />
+              <StatCard
+                label="Legacy Enrollments"
+                value={enrollments.length}
+                caption="From old enrollment system"
+              />
+            </section>
+
+            <section>
+              <h2 className="mb-4 font-serif text-xl font-bold text-primary dark:text-gold">
+                Quick Actions & Navigation
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Card className="flex flex-col justify-between hover:border-teal transition-colors">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-bold text-primary dark:text-gold">
+                      <ClipboardList className="h-5 w-5" /> Enrollments
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-gold-light/70">
+                      Manage student enrollments, assign exams, and approve applications.
+                    </p>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/dashboard/admin/enrollments">
+                      <Button variant="secondary" className="w-full">Manage Enrollments</Button>
+                    </Link>
+                  </div>
+                </Card>
+
+                <Card className="flex flex-col justify-between hover:border-teal transition-colors">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-bold text-primary dark:text-gold">
+                      <BookOpen className="h-5 w-5" /> Question Bank
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-gold-light/70">
+                      Create and manage questions for placement exams and assessments.
+                    </p>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/dashboard/admin/questions">
+                      <Button variant="secondary" className="w-full">Manage Questions</Button>
+                    </Link>
+                  </div>
+                </Card>
+
+                <Card className="flex flex-col justify-between hover:border-teal transition-colors">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-bold text-primary dark:text-gold">
+                      <Settings className="h-5 w-5" /> Assessments
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-gold-light/70">
+                      Build assessments using the question bank.
+                    </p>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/dashboard/admin/assessments">
+                      <Button variant="secondary" className="w-full">Manage Assessments</Button>
+                    </Link>
+                  </div>
+                </Card>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {tab === 'teachers' && (
+          <Card>
+            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="m-0 font-serif text-lg font-semibold text-primary dark:text-gold">
+                  Teachers
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">Manage instructor profiles and approvals.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600 dark:text-gold-light/70">Filter:</span>
+                <Select
+                  value={teacherFilter}
+                  onChange={(e) => setTeacherFilter(e.target.value as TeacherStatus | '')}
+                >
+                  <option value="">All Statuses</option>
+                  {TEACHER_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            <DataTable
+              columns={teacherColumns}
+              rows={teachers}
+              empty={<EmptyState title="No teachers found" description="No teachers match the current filter." />}
+            />
+          </Card>
+        )}
+
+        {tab === 'students' && (
+          <Card>
+            <div className="mb-4">
+              <h2 className="m-0 font-serif text-lg font-semibold text-primary dark:text-gold">
+                Students
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">View and manage student profiles.</p>
+            </div>
+
+            <DataTable
+              columns={studentColumns}
+              rows={students}
+              empty={<EmptyState title="No students" description="No students have registered yet." />}
+            />
+          </Card>
+        )}
       </div>
-    </>
+    </div>
   );
 }

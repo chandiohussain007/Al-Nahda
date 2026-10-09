@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { FeeStatus, StudentEnrollmentStatus } from '@prisma/client';
 import { ResolveFeeDto } from '../admin/admin.dto.js';
+import type { Pagination } from '../common/pagination.dto.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
@@ -72,7 +73,7 @@ export class StudentEnrollmentsService {
   }
 
   /** Student: list own enrollments. */
-  async listMine(userId: string) {
+  async listMine(userId: string, pagination?: Pagination) {
     return this.prisma.studentEnrollment.findMany({
       where: { studentId: userId },
       include: {
@@ -81,11 +82,12 @@ export class StudentEnrollmentsService {
         assignedAssessment: { select: { id: true, title: true, durationMinutes: true } },
       },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 
   /** Admin: list all enrollments (with optional status filter). */
-  async listAll(status?: StudentEnrollmentStatus) {
+  async listAll(status?: StudentEnrollmentStatus, pagination?: Pagination) {
     return this.prisma.studentEnrollment.findMany({
       where: status ? { status } : undefined,
       include: {
@@ -95,6 +97,7 @@ export class StudentEnrollmentsService {
         assignedAssessment: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 

@@ -12,6 +12,15 @@ import {
   Matches,
   Min,
 } from 'class-validator';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
+
+/** Filters + pagination for the approved-teacher directory. */
+export class ListApprovedTeachersQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ description: 'Only teachers available during this time slot' })
+  @IsOptional()
+  @IsString()
+  timeSlot?: string;
+}
 
 export class UpsertTeacherProfileDto {
   @ApiProperty({ example: 'Sheikh Yusuf Ali' })

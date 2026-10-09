@@ -12,6 +12,8 @@ node_modules/
 # Test / coverage
 **/coverage/
 **/*.tsbuildinfo
+**/test-results/
+**/playwright-report/
 
 # Environment files — never commit real secrets
 .env
@@ -24,8 +26,15 @@ node_modules/
 # Secrets / certificates
 *.pem
 *.key
+*.crt
+*.cer
 *.p12
 *.pfx
+*.p8
+*.jks
+*.keystore
+.secrets/
+**/.secrets/
 secrets.json
 **/secrets.json
 

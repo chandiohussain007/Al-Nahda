@@ -5,8 +5,8 @@ Al Nahda is an Islamic online education platform focused on two learning tracks:
 - Learn Quran
 - Learn Arabic
 
-This repository contains the backend services (NestJS modular monolith) plus the
-product and project documentation.
+This repository contains the Al Nahda landing page and portal, the NestJS API,
+and the project documentation.
 
 ## Repository layout
 
@@ -20,6 +20,7 @@ Al Nahda/
 │  ├─ src/
 │  │  ├─ auth/              Google ID token verification, JWT guards, roles, teacher-approval guard
 │  │  ├─ users/             User identity persistence (Google upsert, ADMIN_EMAILS bootstrap)
+│  │  ├─ public-applications/ Student and teacher applications delivered by Resend
 │  │  ├─ admin/             Admin APIs (teacher approval, students, enrollments)
 │  │  ├─ students/          Student profile + progress
 │  │  ├─ teachers/          Teacher profile + notifications
@@ -30,16 +31,10 @@ Al Nahda/
 │  │  ├─ prisma/            PrismaService / PrismaModule
 │  │  └─ health/            Health check
 │  └─ Dockerfile            Production image for Render / Koyeb
+├─ frontend/                Next.js landing page and student/teacher/admin portal
 ├─ .github/workflows/ci.yml GitHub Actions CI (build, lint, unit + e2e tests)
-├─ render.yaml              Render free-tier blueprint
-├─ PRD.md                   Product requirements
-└─ PROJECT_CONTEXT.md       Project context and implementation guide
+└─ render.yaml              Render free-tier blueprint
 ```
-
-## Documentation
-
-- [PRD.md](./PRD.md) — product requirements document
-- [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) — project context and implementation guide
 
 ## Quick start
 

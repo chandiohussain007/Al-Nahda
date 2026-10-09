@@ -12,14 +12,18 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Course, Difficulty, Level, UserRole } from '@prisma/client';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
-import { CreateQuestionDto, UpdateQuestionDto } from './questions.dto.js';
+import {
+  CreateQuestionDto,
+  ListQuestionsQueryDto,
+  UpdateQuestionDto,
+} from './questions.dto.js';
 import { QuestionsService } from './questions.service.js';
 
 @ApiTags('Questions')
@@ -39,15 +43,11 @@ export class QuestionsController {
   @Get()
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @ApiOperation({ summary: 'List questions (filterable by course / level / difficulty)' })
-  @ApiQuery({ name: 'course', enum: Course, required: false })
-  @ApiQuery({ name: 'level', enum: Level, required: false })
-  @ApiQuery({ name: 'difficulty', enum: Difficulty, required: false })
-  findAll(
-    @Query('course') course?: Course,
-    @Query('level') level?: Level,
-    @Query('difficulty') difficulty?: Difficulty,
-  ) {
-    return this.questionsService.findAll({ course, level, difficulty });
+  findAll(@Query() query: ListQuestionsQueryDto) {
+    return this.questionsService.findAll(
+      { course: query.course, level: query.level, difficulty: query.difficulty },
+      { skip: query.skip, take: query.take },
+    );
   }
 
   @Get(':id')

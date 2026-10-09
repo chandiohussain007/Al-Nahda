@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { TeacherStatus } from '@prisma/client';
+import type { Pagination } from '../common/pagination.dto.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SendTeacherNotificationDto, UpsertTeacherProfileDto } from './teachers.dto.js';
@@ -38,7 +39,7 @@ export class TeachersService {
    * enrollment. Selects profile fields only, so user emails are never
    * exposed to other accounts.
    */
-  listApproved(timeSlot?: string) {
+  listApproved(timeSlot?: string, pagination?: Pagination) {
     return this.prisma.teacherProfile.findMany({
       where: {
         teacherStatus: TeacherStatus.APPROVED,
@@ -55,6 +56,7 @@ export class TeachersService {
         availableTimeSlots: true,
       },
       orderBy: { fullName: 'asc' },
+      ...pagination,
     });
   }
 

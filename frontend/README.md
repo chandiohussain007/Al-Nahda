@@ -34,7 +34,10 @@ Vercel origin when using an explicit CORS allow-list.
 
 | Path | Access | What it does |
 | --- | --- | --- |
-| `/login` | public | Role picker + Google button; probes `/api/health` so a bad API URL is visible immediately |
+| `/` | public | Landing page with visible Sign in, Register, and Join our team links |
+| `/register` | public | Student course-interest form, plus Google sign-in for portal access |
+| `/login` | public | Google portal sign-in; role is assigned automatically from the verified email |
+| `/careers` | public | Teacher application form emailed to the configured admin address |
 | `/dashboard` | any session | Dispatches to the role's own dashboard |
 | `/dashboard/admin` | `ADMIN` | Approve/reject teachers, review enrollments, list students |
 | `/dashboard/teacher` | `TEACHER` | Profile, own enrollments, record attendance, send a notification |
@@ -51,6 +54,12 @@ Identity Services ID token**. There is no OAuth redirect callback, so the login
 page loads `accounts.google.com/gsi/client`, renders the official button, and
 posts the credential. The internal JWT comes back as `accessToken` and is kept
 in `localStorage`, then attached to every request by an axios interceptor.
+The student registration form sends a course-interest request to the admin; it
+does not create a password-based account. Google creates/opens the portal
+account, and the backend assigns `ADMIN`, `TEACHER`, or `STUDENT` from the
+verified email and server-side allow-lists. Public registration and teacher
+application email delivery requires the backend Resend configuration documented
+in `backend/README.md`.
 
 ## Scripts
 

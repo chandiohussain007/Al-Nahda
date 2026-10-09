@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -16,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
 import { SaveAnswerDto, StartAttemptDto } from './attempts.dto.js';
 import { AttemptsService } from './attempts.service.js';
 
@@ -38,8 +40,11 @@ export class AttemptsController {
 
   @Get()
   @ApiOperation({ summary: 'List all my attempts' })
-  listMine(@CurrentUser() user: AuthenticatedUser) {
-    return this.attemptsService.listMyAttempts(user.sub);
+  listMine(@CurrentUser() user: AuthenticatedUser, @Query() query: PaginationQueryDto) {
+    return this.attemptsService.listMyAttempts(user.sub, {
+      skip: query.skip,
+      take: query.take,
+    });
   }
 
   @Get(':id')

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import StatusBadge from '@/components/StatusBadge';
+import StatusBadge from '@/components/data-display/StatusBadge';
 import { apiErrorMessage, fetchEnrollment } from '@/lib/api';
 import type { Enrollment } from '@/lib/types';
 
@@ -50,11 +50,11 @@ export default function StudentEnrollmentDetailPage() {
       <div className="row">
         <h1>Enrollment</h1>
         <span className="spacer" />
-        <Link href="/dashboard/student/enrollments">← All enrollments</Link>
+        <Link href="/dashboard/student/enrollments">â† All enrollments</Link>
       </div>
 
       {error && <div className="error">{error}</div>}
-      {loading && <p className="muted">Loading…</p>}
+      {loading && <p className="muted">Loadingâ€¦</p>}
 
       {enrollment && (
         <div className="grid-2">
@@ -80,7 +80,7 @@ export default function StudentEnrollmentDetailPage() {
                 </tr>
                 <tr>
                   <th>Teacher</th>
-                  <td>{enrollment.teacher?.fullName ?? '—'}</td>
+                  <td>{enrollment.teacher?.fullName ?? 'â€”'}</td>
                 </tr>
                 <tr>
                   <th>Requested</th>
@@ -113,7 +113,7 @@ export default function StudentEnrollmentDetailPage() {
                 </div>
 
                 <p className="muted">
-                  Absent {absent} · Excused {excused}
+                  Absent {absent} Â· Excused {excused}
                 </p>
 
                 <table>

@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -17,6 +18,7 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
 import { AddQuestionsDto, CreateAssessmentDto, UpdateAssessmentDto } from './assessments.dto.js';
 import { AssessmentsService } from './assessments.service.js';
 
@@ -37,8 +39,8 @@ export class AssessmentsController {
   @Get()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'List all assessments' })
-  findAll() {
-    return this.assessmentsService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.assessmentsService.findAll({ skip: query.skip, take: query.take });
   }
 
   @Get(':id')

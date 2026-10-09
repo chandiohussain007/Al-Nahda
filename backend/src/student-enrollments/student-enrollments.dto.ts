@@ -1,6 +1,15 @@
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { StudentEnrollmentStatus } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../common/pagination.dto.js';
+
+/** Filters + pagination for the admin enrollment listing. */
+export class ListStudentEnrollmentsQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: StudentEnrollmentStatus, description: 'Filter by status' })
+  @IsOptional()
+  @IsEnum(StudentEnrollmentStatus)
+  status?: StudentEnrollmentStatus;
+}
 
 export class CreateStudentEnrollmentDto {
   @ApiProperty({ description: 'CourseItem ID to enroll in' })

@@ -2,15 +2,24 @@ import axios from 'axios';
 import { clearSession, readSession } from './session';
 import type {
   AdminStudentDetail,
+  Assessment,
+  Attempt,
+  AttemptResult,
   AttendanceRecord,
   CreateEnrollment,
+  CourseItem,
   DirectoryTeacher,
   Enrollment,
   EnrollmentStatus,
   EvaluationQuestion,
   EvaluationTest,
+  LevelContent,
   LoginResponse,
   Notification,
+  Question,
+  StartAttemptResponse,
+  StudentEnrollmentRecord,
+  StudentEnrollmentStatus,
   StudentProfile,
   StudentProgress,
   SubmitEvaluation,
@@ -18,7 +27,6 @@ import type {
   TeacherStatus,
   UpsertStudentProfile,
   UpsertTeacherProfile,
-  UserRole,
 } from './types';
 
 /** Base URL of the API, configured via NEXT_PUBLIC_API_URL. */
@@ -72,14 +80,26 @@ export function apiErrorMessage(error: unknown, fallback = 'Request failed'): st
 type AnyRecord = Record<string, unknown>;
 
 // --- auth -------------------------------------------------------------------
-export const loginWithGoogle = (idToken: string, role?: UserRole) =>
-  api
-    .post<LoginResponse>('/api/auth/google', { idToken, ...(role ? { role } : {}) })
-    .then((r) => r.data);
+export const loginWithGoogle = (idToken: string) =>
+  api.post<LoginResponse>('/api/auth/google', { idToken }).then((r) => r.data);
 
 // --- health -----------------------------------------------------------------
 export const fetchHealth = () => api.get<AnyRecord>('/api/health').then((r) => r.data);
 export const fetchReadiness = () => api.get<AnyRecord>('/api/health/ready').then((r) => r.data);
+
+export const submitStudentRegistration = (dto: {
+  fullName: string;
+  email: string;
+  preferredCourse: string;
+}) => api.post('/api/public/student-registration', dto).then((r) => r.data);
+
+export const submitTeacherApplication = (dto: {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  experience: string;
+}) => api.post('/api/public/teacher-application', dto).then((r) => r.data);
 
 // --- teacher directory (approved only) --------------------------------------
 export const fetchTeacherDirectory = (timeSlot?: string) =>
@@ -190,17 +210,6 @@ export function apiStatus(error: unknown): number | undefined {
 }
 
 // ─── Assessment Module APIs ─────────────────────────────────────────────────
-import type {
-  Assessment,
-  Attempt,
-  AttemptResult,
-  CourseItem,
-  LevelContent,
-  Question,
-  StartAttemptResponse,
-  StudentEnrollmentRecord,
-  StudentEnrollmentStatus,
-} from './types';
 
 // --- questions ---------------------------------------------------------------
 export const fetchQuestions = (params?: { course?: string; level?: string; difficulty?: string }) =>

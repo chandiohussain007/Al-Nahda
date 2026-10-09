@@ -2,38 +2,50 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import StatusBadge from '@/components/StatusBadge';
-import { apiErrorMessage, apiStatus, fetchMyEnrollments, fetchStudentProfile } from '@/lib/api';
-import type { Enrollment } from '@/lib/types';
+import { BookOpen, CalendarDays, ClipboardCheck, GraduationCap } from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/data-display/StatusBadge';
+import EmptyState from '@/components/feedback/EmptyState';
+import SkeletonLoader from '@/components/feedback/SkeletonLoader';
+import ErrorCard from '@/components/feedback/ErrorCard';
+import { apiErrorMessage, fetchMyStudentEnrollments } from '@/lib/api';
+import type { StudentEnrollmentRecord, StudentEnrollmentStatus } from '@/lib/types';
 
-/** Full enrollment list for the signed-in student (Progress only summarises). */
+/** Lifecycle order surfaced to the student; drives the per-card progress trail. */
+const LIFECYCLE: StudentEnrollmentStatus[] = [
+  'PENDING',
+  'IN_PROGRESS',
+  'ASSESSMENT_REQUIRED',
+  'ASSESSMENT_COMPLETED',
+  'APPROVED',
+  'ACTIVE',
+];
+
+function stageIndex(status: StudentEnrollmentStatus): number {
+  const i = LIFECYCLE.indexOf(status);
+  return i === -1 ? 0 : i;
+}
+
+/** Full enrollment list for the signed-in student. */
 export default function StudentEnrollmentsPage() {
-  const [rows, setRows] = useState<Enrollment[]>([]);
+  const [rows, setRows] = useState<StudentEnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    fetchStudentProfile()
-      .then(() => {
-        if (cancelled) return;
-        return fetchMyEnrollments();
-      })
+    fetchMyStudentEnrollments()
       .then((data) => {
-        if (!cancelled && data) {
+        if (!cancelled) {
           setRows(data);
           setError(null);
         }
       })
       .catch((e) => {
-        if (!cancelled) {
-          if (apiStatus(e) === 404) {
-             setError('Create your profile in the Dashboard first.');
-          } else {
-             setError(apiErrorMessage(e, 'Could not load your enrollments'));
-          }
-        }
+        if (!cancelled) setError(apiErrorMessage(e, 'Could not load your enrollments'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -45,57 +57,103 @@ export default function StudentEnrollmentsPage() {
   }, []);
 
   return (
-    <>
-      <div className="row">
-        <h1>My enrollments</h1>
-        <span className="spacer" />
-        <Link href="/dashboard/student">← Back to dashboard</Link>
+    <div className="mx-auto max-w-5xl">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="m-0 font-serif text-2xl font-bold text-primary dark:text-gold">
+            My enrollments
+          </h1>
+          <p className="m-0 mt-1 text-sm text-slate-500 dark:text-gold-light/70">
+            Track each request as it moves through review, placement, and approval.
+          </p>
+        </div>
+        <Link href="/dashboard/student/courses">
+          <Button variant="secondary">Browse courses</Button>
+        </Link>
+      </header>
+
+      {error && <ErrorCard message={error} className="mb-4" />}
+
+      {loading ? (
+        <SkeletonLoader rows={3} height="h-28" />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={<BookOpen className="h-8 w-8" />}
+          title="No enrollments yet"
+          description="Request a course from the catalog and it will appear here with live status updates."
+          action={
+            <Link href="/dashboard/student/courses">
+              <Button variant="primary">Find a course</Button>
+            </Link>
+          }
+        />
+      ) : (
+        <ul className="flex list-none flex-col gap-4 p-0">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <EnrollmentCard row={row} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function EnrollmentCard({ row }: { row: StudentEnrollmentRecord }) {
+  const stage = stageIndex(row.status);
+  const isRejected = row.status === 'REJECTED';
+
+  return (
+    <Card className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="m-0 font-serif text-lg font-semibold text-primary dark:text-gold">
+            {row.course?.name ?? 'Course'}
+          </h2>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-gold-light/70">
+            {row.selectedLevel && (
+              <span className="inline-flex items-center gap-1">
+                <GraduationCap className="h-3.5 w-3.5" /> Level: {row.selectedLevel.name}
+              </span>
+            )}
+            {row.assignedAssessment && (
+              <span className="inline-flex items-center gap-1">
+                <ClipboardCheck className="h-3.5 w-3.5" /> {row.assignedAssessment.title}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5" />{' '}
+              {new Date(row.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+        <StatusBadge status={row.status} />
       </div>
 
-      {error && <div className="error">{error}</div>}
-      {loading && <p className="muted">Loading…</p>}
+      {!isRejected && (
+        <ol className="m-0 flex list-none items-center gap-1 p-0">
+          {LIFECYCLE.map((step, i) => (
+            <li
+              key={step}
+              className="h-1.5 flex-1 rounded-full bg-sandstone transition-colors dark:bg-white/10"
+              style={i <= stage ? { backgroundColor: '#176B68' } : undefined}
+              title={step.replace(/_/g, ' ')}
+            />
+          ))}
+        </ol>
+      )}
 
-      {!loading && (
-        <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Course</th>
-                <th>Level</th>
-                <th>Time slot</th>
-                <th>Teacher</th>
-                <th>Status</th>
-                <th>Requested</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.courseName}</td>
-                  <td>{row.confirmedLevel}</td>
-                  <td>{row.preferredTimeSlot}</td>
-                  <td>{row.teacher?.fullName ?? '—'}</td>
-                  <td>
-                    <StatusBadge status={row.status} />
-                  </td>
-                  <td className="muted">{new Date(row.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <Link href={`/dashboard/student/enrollments/${row.id}`}>View</Link>
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="muted">
-                    No enrollments yet — request one from your dashboard.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {(row.proposedFee != null || row.agreedFee != null) && (
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-gold-light/70">
+          <span>Fee:</span>
+          {row.agreedFee != null ? (
+            <Badge tone="success">Agreed &middot; {row.agreedFee}</Badge>
+          ) : (
+            <Badge tone="warning">Proposed &middot; {row.proposedFee}</Badge>
+          )}
         </div>
       )}
-    </>
+    </Card>
   );
 }

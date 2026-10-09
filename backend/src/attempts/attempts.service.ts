@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AttemptStatus } from '@prisma/client';
+import type { Pagination } from '../common/pagination.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { GradingService } from './grading.service.js';
 
@@ -233,13 +234,14 @@ export class AttemptsService {
     return attempt;
   }
 
-  async listMyAttempts(userId: string) {
+  async listMyAttempts(userId: string, pagination?: Pagination) {
     return this.prisma.attempt.findMany({
       where: { studentId: userId },
       include: {
         assessment: { select: { id: true, title: true, passPercentage: true } },
       },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AssessmentStatus } from '@prisma/client';
+import type { Pagination } from '../common/pagination.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   AddQuestionsDto,
@@ -43,7 +44,7 @@ export class AssessmentsService {
     });
   }
 
-  async findAll() {
+  async findAll(pagination?: Pagination) {
     return this.prisma.assessment.findMany({
       include: {
         course: { select: { id: true, name: true, slug: true } },
@@ -51,6 +52,7 @@ export class AssessmentsService {
         _count: { select: { questions: true, attempts: true } },
       },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 

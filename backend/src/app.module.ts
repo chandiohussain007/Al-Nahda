@@ -10,11 +10,13 @@ import { AttendanceModule } from './attendance/attendance.module.js';
 import { AttemptsModule } from './attempts/attempts.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { validateEnv } from './config/env.validation.js';
+import { CoursesModule } from './courses/courses.module.js';
 import { EnrollmentsModule } from './enrollments/enrollments.module.js';
 import { EvaluationsModule } from './evaluations/evaluations.module.js';
 import { HealthModule } from './health/health.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { PublicApplicationsModule } from './public-applications/public-applications.module.js';
 import { QuestionsModule } from './questions/questions.module.js';
 import { StudentEnrollmentsModule } from './student-enrollments/student-enrollments.module.js';
 import { StudentsModule } from './students/students.module.js';
@@ -37,6 +39,7 @@ import { UsersModule } from './users/users.module.js';
       },
     ]),
     PrismaModule,
+    PublicApplicationsModule,
     UsersModule,
     AuthModule,
     HealthModule,
@@ -52,6 +55,7 @@ import { UsersModule } from './users/users.module.js';
     AssessmentsModule,
     AttemptsModule,
     StudentEnrollmentsModule,
+    CoursesModule,
   ],
   controllers: [AppController],
   providers: [

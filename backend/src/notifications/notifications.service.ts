@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Pagination } from '../common/pagination.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 export interface CreateNotificationInput {
@@ -29,10 +30,11 @@ export class NotificationsService {
     });
   }
 
-  listForUser(userId: string) {
+  listForUser(userId: string, pagination?: Pagination) {
     return this.prisma.notification.findMany({
       where: { recipientId: userId },
       orderBy: { createdAt: 'desc' },
+      ...pagination,
     });
   }
 
