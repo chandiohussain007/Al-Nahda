@@ -1,20 +1,29 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EnrollmentStatus, FeeStatus, TeacherStatus } from '@prisma/client';
+import {
+  CourseStatus,
+  EnrollmentStatus,
+  FeeStatus,
+  Prisma,
+  TeacherStatus,
+  UserRole,
+} from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Pagination } from '../common/pagination.dto.js';
-import { ResolveFeeDto } from './admin.dto.js';
+import { CreateCourseDto, ResolveFeeDto, UpdateCourseDto } from './admin.dto.js';
 
 const USER_SUMMARY_SELECT = {
   id: true,
   email: true,
   role: true,
   createdAt: true,
+  isActive: true,
 } as const;
 
 @Injectable()
@@ -23,6 +32,82 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  listCourses() {
+    return this.prisma.courseItem.findMany({
+      orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async createCourse(dto: CreateCourseDto) {
+    try {
+      return await this.prisma.courseItem.create({
+        data: {
+          ...dto,
+          description: dto.description ?? null,
+          standardFee: dto.standardFee ?? null,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('A course with this slug already exists');
+      }
+      throw error;
+    }
+  }
+
+  async updateCourse(courseId: string, dto: UpdateCourseDto) {
+    const course = await this.prisma.courseItem.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Course not found');
+
+    try {
+      return await this.prisma.courseItem.update({
+        where: { id: courseId },
+        data: dto,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('A course with this slug already exists');
+      }
+      throw error;
+    }
+  }
+
+  async archiveCourse(courseId: string) {
+    const course = await this.prisma.courseItem.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Course not found');
+
+    return this.prisma.courseItem.update({
+      where: { id: courseId },
+      data: { status: CourseStatus.ARCHIVED },
+    });
+  }
+
+  async setUserActive(userId: string, isActive: boolean, actorId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, isActive: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.id === actorId) {
+      throw new ForbiddenException('You cannot deactivate your own account');
+    }
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Administrator accounts cannot be deactivated here');
+    }
+    if (user.isActive === isActive) {
+      return this.prisma.user.findUnique({
+        where: { id: userId },
+        select: USER_SUMMARY_SELECT,
+      });
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: USER_SUMMARY_SELECT,
+    });
+  }
 
   listTeachers(status?: TeacherStatus, pagination?: Pagination) {
     return this.prisma.teacherProfile.findMany({

@@ -6,8 +6,7 @@ import Link from 'next/link';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import IslamicPattern from '@/components/decorative/IslamicPattern';
 import ErrorCard from '@/components/feedback/ErrorCard';
-import Badge from '@/components/ui/Badge';
-import { API_URL, apiErrorMessage, fetchHealth, loginWithGoogle } from '@/lib/api';
+import { apiErrorMessage, fetchHealth, loginWithGoogle } from '@/lib/api';
 import { dashboardPathFor, readSession, writeSession } from '@/lib/session';
 
 type HealthState = 'checking' | 'up' | 'down';
@@ -29,7 +28,7 @@ export default function LoginPage() {
     if (session) router.replace(dashboardPathFor(session.user.role));
   }, [router]);
 
-  // Probe the API so a bad URL or a dead backend is obvious before signing in.
+  // Probe the API before sign-in and show only its status, never its URL.
   useEffect(() => {
     let cancelled = false;
     fetchHealth()
@@ -107,11 +106,31 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <footer className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500 dark:text-gold-light/70">
-          <code className="max-w-[60%] truncate">API: {API_URL || '(not set)'}</code>
-          {health === 'checking' && <span>checking…</span>}
-          {health === 'up' && <Badge tone="success">reachable</Badge>}
-          {health === 'down' && <Badge tone="danger">unreachable</Badge>}
+        <footer className="mt-6 flex items-center justify-center">
+          <span
+            role="status"
+            aria-label={`Backend status: ${health}`}
+            title={`Backend status: ${health}`}
+            className="inline-flex items-center"
+          >
+            <span
+              aria-hidden="true"
+              className={`h-2.5 w-2.5 rounded-full ${
+                health === 'checking'
+                  ? 'animate-pulse bg-amber-400'
+                  : health === 'up'
+                    ? 'bg-emerald-500'
+                    : 'bg-red-500'
+              }`}
+            />
+            <span className="sr-only">
+              {health === 'checking'
+                ? 'Checking backend connection'
+                : health === 'up'
+                  ? 'Backend reachable'
+                  : 'Backend unreachable'}
+            </span>
+          </span>
         </footer>
       </section>
     </main>

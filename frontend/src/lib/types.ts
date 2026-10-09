@@ -41,6 +41,7 @@ export interface UserSummary {
   email: string;
   role: UserRole;
   createdAt: string;
+  isActive: boolean;
 }
 
 /** Row returned by GET /api/teachers — deliberately has no user/email. */
@@ -348,4 +349,3 @@ export interface Attempt {
   submittedAt: string | null;
   assessment?: Pick<Assessment, 'id' | 'title' | 'passPercentage'>;
 }
-

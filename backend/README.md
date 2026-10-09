@@ -19,7 +19,7 @@ Copy `.env.example` to `.env` and provide:
 | Variable | Description |
 | --- | --- |
 | `NODE_ENV` | `development` / `production` (production enables strict env validation) |
-| `PORT` | HTTP port (default `3000`) |
+| `PORT` | HTTP port (default `3001` locally; Render sets `3000`) |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `DIRECT_URL` | Direct PostgreSQL connection string used by Prisma migrations (bypasses poolers) |
 | `JWT_SECRET` | Secret used to sign internal JWTs (≥ 16 chars in production) |

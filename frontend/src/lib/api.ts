@@ -8,6 +8,7 @@ import type {
   AttendanceRecord,
   CreateEnrollment,
   CourseItem,
+  CourseStatus,
   DirectoryTeacher,
   Enrollment,
   EnrollmentStatus,
@@ -27,6 +28,7 @@ import type {
   TeacherStatus,
   UpsertStudentProfile,
   UpsertTeacherProfile,
+  UserSummary,
 } from './types';
 
 /** Base URL of the API, configured via NEXT_PUBLIC_API_URL. */
@@ -113,6 +115,31 @@ export const fetchAdminTeachers = (status?: TeacherStatus) =>
     .get<TeacherProfile[]>('/api/admin/teachers', { params: status ? { status } : {} })
     .then((r) => r.data);
 
+export const fetchAdminCourses = () =>
+  api.get<CourseItem[]>('/api/admin/courses').then((r) => r.data);
+
+export const createAdminCourse = (dto: {
+  name: string;
+  slug: string;
+  description: string | null;
+  standardFee: number | null;
+  status: CourseStatus;
+}) => api.post<CourseItem>('/api/admin/courses', dto).then((r) => r.data);
+
+export const updateAdminCourse = (
+  id: string,
+  dto: {
+    name: string;
+    slug: string;
+    description: string | null;
+    standardFee: number | null;
+    status: CourseStatus;
+  },
+) => api.patch<CourseItem>(`/api/admin/courses/${id}`, dto).then((r) => r.data);
+
+export const archiveAdminCourse = (id: string) =>
+  api.delete<CourseItem>(`/api/admin/courses/${id}`).then((r) => r.data);
+
 export const approveTeacher = (id: string) =>
   api.patch<TeacherProfile>(`/api/admin/teachers/${id}/approve`).then((r) => r.data);
 
@@ -121,6 +148,11 @@ export const rejectTeacher = (id: string) =>
 
 export const fetchAdminStudents = () =>
   api.get<StudentProfile[]>('/api/admin/students').then((r) => r.data);
+
+export const setAdminUserActive = (userId: string, isActive: boolean) =>
+  api
+    .patch<UserSummary>(`/api/admin/users/${userId}/active`, { isActive })
+    .then((r) => r.data);
 
 export const fetchAdminStudent = (id: string) =>
   api.get<AdminStudentDetail>(`/api/admin/students/${id}`).then((r) => r.data);

@@ -13,9 +13,13 @@ cp .env.example .env.local   # then fill in the values
 npm run dev                  # http://localhost:3000
 ```
 
+For local development, start the backend in a separate terminal with
+`cd backend && npm run start:dev`. The backend listens on port `3001` by default;
+the frontend uses that URL from `.env.local`.
+
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Base URL of the API, e.g. `https://al-nahda-backend.onrender.com` (no trailing slash) |
+| `NEXT_PUBLIC_API_URL` | Base URL of the API (`http://localhost:3001` locally; use the deployed API URL in production) |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Must be the **same** client as `GOOGLE_CLIENT_ID` on the backend, or token verification 401s |
 
 ## Deployment environment

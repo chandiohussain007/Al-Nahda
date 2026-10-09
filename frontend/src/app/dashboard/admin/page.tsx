@@ -23,6 +23,7 @@ import {
   fetchAdminStudents,
   fetchAdminTeachers,
   rejectTeacher,
+  setAdminUserActive,
   setProfilePicture,
   setTeacherCv,
 } from '@/lib/api';
@@ -126,6 +127,29 @@ function AdminDashboard() {
     );
   }
 
+  async function changeAccountStatus(
+    userId: string | undefined,
+    name: string,
+    isActive: boolean,
+  ) {
+    if (!userId) return;
+    const action = isActive ? 'restore' : 'deactivate';
+    if (
+      !window.confirm(
+        `Are you sure you want to ${action} ${name}'s account? ${
+          isActive ? '' : 'Their data will be preserved, but they will lose access.'
+        }`,
+      )
+    ) {
+      return;
+    }
+
+    await act(
+      isActive ? 'Account restored.' : 'Account deactivated.',
+      () => setAdminUserActive(userId, isActive),
+    );
+  }
+
   if (loading && tab === 'overview') {
     return (
       <div className="space-y-6">
@@ -140,6 +164,7 @@ function AdminDashboard() {
   const teacherColumns: Column<TeacherProfile>[] = [
     { key: 'name', header: 'Name', render: (t) => <div className="font-medium text-primary dark:text-ivory">{t.fullName}</div> },
     { key: 'email', header: 'Email', render: (t) => <div className="text-sm text-slate-500">{t.user?.email ?? '—'}</div> },
+    { key: 'account', header: 'Account', render: (t) => <span className={t.user?.isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}>{t.user?.isActive ? 'Active' : 'Deactivated'}</span> },
     { key: 'phone', header: 'Phone', secondary: true, render: (t) => t.phoneNumber ?? '—' },
     { key: 'subjects', header: 'Subjects', secondary: true, render: (t) => t.subjectsTaught.join(', ') || '—' },
     { key: 'exp', header: 'Experience', secondary: true, render: (t) => `${t.experienceYears} yrs` },
@@ -185,6 +210,16 @@ function AdminDashboard() {
           >
             CV
           </Button>
+          <Button
+            size="sm"
+            variant={t.user?.isActive ? 'danger' : 'secondary'}
+            disabled={busy || !t.userId}
+            onClick={() =>
+              void changeAccountStatus(t.userId, t.fullName, !t.user?.isActive)
+            }
+          >
+            {t.user?.isActive ? 'Deactivate' : 'Restore'}
+          </Button>
         </div>
       )
     }
@@ -193,6 +228,7 @@ function AdminDashboard() {
   const studentColumns: Column<StudentProfile>[] = [
     { key: 'name', header: 'Name', render: (s) => <div className="font-medium text-primary dark:text-ivory">{s.fullName}</div> },
     { key: 'email', header: 'Email', render: (s) => <div className="text-sm text-slate-500">{s.user?.email ?? '—'}</div> },
+    { key: 'account', header: 'Account', render: (s) => <span className={s.user?.isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}>{s.user?.isActive ? 'Active' : 'Deactivated'}</span> },
     { key: 'joined', header: 'Joined', secondary: true, render: (s) => new Date(s.user?.createdAt ?? '').toLocaleDateString() },
     {
       key: 'actions',
@@ -209,6 +245,16 @@ function AdminDashboard() {
             onClick={() => void changePicture(s.userId, s.fullName)}
           >
             Picture
+          </Button>
+          <Button
+            size="sm"
+            variant={s.user?.isActive ? 'danger' : 'secondary'}
+            disabled={busy || !s.userId}
+            onClick={() =>
+              void changeAccountStatus(s.userId, s.fullName, !s.user?.isActive)
+            }
+          >
+            {s.user?.isActive ? 'Deactivate' : 'Restore'}
           </Button>
         </div>
       )
@@ -278,6 +324,22 @@ function AdminDashboard() {
                 Quick Actions & Navigation
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Card className="flex flex-col justify-between hover:border-teal transition-colors">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-bold text-primary dark:text-gold">
+                      <BookOpen className="h-5 w-5" /> Courses
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-gold-light/70">
+                      Create courses, update their details, and publish or archive them.
+                    </p>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/dashboard/admin/courses">
+                      <Button variant="secondary" className="w-full">Manage Courses</Button>
+                    </Link>
+                  </div>
+                </Card>
+
                 <Card className="flex flex-col justify-between hover:border-teal transition-colors">
                   <div>
                     <h3 className="flex items-center gap-2 text-lg font-bold text-primary dark:text-gold">

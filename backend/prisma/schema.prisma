@@ -108,6 +108,7 @@ model User {
   googleId  String   @unique
   role      UserRole
   createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
 
   studentProfile     StudentProfile?
   teacherProfile     TeacherProfile?

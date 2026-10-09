@@ -92,5 +92,17 @@ describe('LoginPage', () => {
 
     expect(screen.getByText(/Google account registered/i)).toBeTruthy();
     expect(screen.queryByText(/I am signing in as/i)).toBeNull();
+    expect(screen.getByRole('status').getAttribute('aria-label')).toBe('Backend status: up');
+    expect(screen.queryByText(/API:/i)).toBeNull();
+  });
+
+  it('shows a red status indicator when the backend is unreachable', async () => {
+    fetchHealthMock.mockRejectedValue(new Error('Connection failed'));
+
+    render(<LoginPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status').getAttribute('aria-label')).toBe('Backend status: down');
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { User, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -54,6 +54,12 @@ export class UsersService {
     });
 
     if (existing) {
+      if (!existing.isActive) {
+        throw new ForbiddenException(
+          'This account has been deactivated. Contact an administrator.',
+        );
+      }
+
       return this.prisma.user.update({
         where: { id: existing.id },
         data: { email: input.email, googleId: input.googleId, role },

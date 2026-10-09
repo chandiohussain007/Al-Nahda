@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Post,
   ParseUUIDPipe,
   Patch,
   Query,
@@ -12,15 +13,20 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { EnrollmentStatus, TeacherStatus, UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
 import {
   ListEnrollmentsQueryDto,
   ListStudentsQueryDto,
   ListTeachersQueryDto,
+  CreateCourseDto,
   ResolveFeeDto,
   SetCvDto,
   SetProfilePictureDto,
+  SetUserActiveDto,
+  UpdateCourseDto,
 } from './admin.dto.js';
 import { AdminService } from './admin.service.js';
 
@@ -31,6 +37,43 @@ import { AdminService } from './admin.service.js';
 @Controller('api/admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  @Get('courses')
+  @ApiOperation({ summary: 'List all courses, including drafts and archived courses' })
+  listCourses() {
+    return this.adminService.listCourses();
+  }
+
+  @Post('courses')
+  @ApiOperation({ summary: 'Create a course' })
+  createCourse(@Body() dto: CreateCourseDto) {
+    return this.adminService.createCourse(dto);
+  }
+
+  @Patch('courses/:id')
+  @ApiOperation({ summary: 'Update a course' })
+  updateCourse(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateCourseDto,
+  ) {
+    return this.adminService.updateCourse(id, dto);
+  }
+
+  @Delete('courses/:id')
+  @ApiOperation({ summary: 'Archive a course without deleting its related learning records' })
+  archiveCourse(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.archiveCourse(id);
+  }
+
+  @Patch('users/:id/active')
+  @ApiOperation({ summary: 'Deactivate or restore a non-administrator account' })
+  setUserActive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetUserActiveDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.adminService.setUserActive(id, dto.isActive, actor.sub);
+  }
 
   @Get('teachers')
   @ApiOperation({ summary: 'List teacher profiles with their approval status' })

@@ -82,7 +82,11 @@ describe('UsersService', () => {
 
   it('removes a stored teacher role if the email is not in the teacher allow-list', async () => {
     const service = await buildService('');
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'u1', role: UserRole.TEACHER });
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u1',
+      role: UserRole.TEACHER,
+      isActive: true,
+    });
     prismaMock.user.update.mockResolvedValue({ id: 'u1', role: UserRole.STUDENT });
 
     await service.upsertFromGoogle({ email: 'teacher@example.com', googleId: 'g1' });
@@ -91,11 +95,30 @@ describe('UsersService', () => {
       where: { id: 'u1' },
       data: { email: 'teacher@example.com', googleId: 'g1', role: UserRole.STUDENT },
     });
+
+  });
+
+  it('rejects Google login for a deactivated account', async () => {
+    const service = await buildService('');
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u1',
+      role: UserRole.STUDENT,
+      isActive: false,
+    });
+
+    await expect(
+      service.upsertFromGoogle({ email: 'student@example.com', googleId: 'g1' }),
+    ).rejects.toThrow('This account has been deactivated');
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
   });
 
   it('assigns TEACHER role to an existing user after the email is allow-listed', async () => {
     const service = await buildService('', 'teacher@example.com');
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'u1', role: UserRole.STUDENT });
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u1',
+      role: UserRole.STUDENT,
+      isActive: true,
+    });
     prismaMock.user.update.mockResolvedValue({ id: 'u1', role: UserRole.TEACHER });
 
     await service.upsertFromGoogle({ email: 'teacher@example.com', googleId: 'g1' });
