@@ -3,6 +3,9 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { ApiConnector } from '@/components/ApiConnector';
+import { BackendWarmup } from '@/components/BackendWarmup';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,6 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Typography per the AI Studio design system: Cinzel for display,
             Plus Jakarta Sans for UI, Amiri for Arabic/RTL content. */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0f766e" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -46,9 +51,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           <LanguageProvider>
-            <ToastProvider>
-              <ErrorBoundary>{children}</ErrorBoundary>
-            </ToastProvider>
+            <AuthProvider>
+              {/*
+                ApiConnector registers the in-memory token getter with the Axios
+                instance so the interceptors can always read the latest token
+                without a circular import. Renders nothing to the DOM.
+              */}
+              <ApiConnector />
+              <BackendWarmup />
+              <ToastProvider>
+                <ErrorBoundary>{children}</ErrorBoundary>
+              </ToastProvider>
+            </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

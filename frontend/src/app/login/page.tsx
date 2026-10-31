@@ -7,7 +7,8 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 import IslamicPattern from '@/components/decorative/IslamicPattern';
 import ErrorCard from '@/components/feedback/ErrorCard';
 import { apiErrorMessage, fetchHealth, loginWithGoogle } from '@/lib/api';
-import { dashboardPathFor, readSession, writeSession } from '@/lib/session';
+import { dashboardPathFor } from '@/lib/session';
+import { useAuth } from '@/context/AuthContext';
 
 type HealthState = 'checking' | 'up' | 'down';
 
@@ -18,15 +19,17 @@ const CLIENT_ID_CONFIGURED = Boolean(
 
 export default function LoginPage() {
   const router = useRouter();
+  const { accessToken, user, ready, setSession } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>('checking');
 
   // Already signed in? Go straight to the dashboard.
   useEffect(() => {
-    const session = readSession();
-    if (session) router.replace(dashboardPathFor(session.user.role));
-  }, [router]);
+    if (ready && accessToken && user) {
+      router.replace(dashboardPathFor(user.role));
+    }
+  }, [ready, accessToken, user, router]);
 
   // Probe the API before sign-in and show only its status, never its URL.
   useEffect(() => {
@@ -44,15 +47,17 @@ export default function LoginPage() {
       setBusy(true);
       setError(null);
       try {
-        const session = await loginWithGoogle(idToken);
-        writeSession(session);
-        router.replace(dashboardPathFor(session.user.role));
+        // loginWithGoogle returns { accessToken, user } — the refresh token
+        // is set as an httpOnly cookie by the backend automatically.
+        const result = await loginWithGoogle(idToken);
+        setSession(result.accessToken, result.user);
+        router.replace(dashboardPathFor(result.user.role));
       } catch (e) {
         setError(apiErrorMessage(e, 'Sign-in failed'));
         setBusy(false);
       }
     },
-    [router],
+    [router, setSession],
   );
   const handleGoogleError = useCallback((googleError: Error) => {
     setError(googleError.message);

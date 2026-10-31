@@ -1,36 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { readSession } from './session';
-import type { Session, UserRole } from './types';
+import { useAuth } from '../context/AuthContext';
+import type { UserRole } from './types';
 
 /**
- * Reads the stored session on the client and bounces the visitor to /login
- * when there is none. `ready` is false until the first read completes, so
- * callers can avoid flashing the wrong screen during hydration.
+ * Guards a page by role. Redirects to /login when no session exists, or to
+ * /dashboard when the role does not match. Returns `{ session, ready }` for
+ * backwards-compatibility with existing page components.
+ *
+ * The session now comes from AuthContext (in-memory access token) rather than
+ * localStorage. `ready` is false until the initial silent-refresh resolves.
  */
 export function useSession(requiredRole?: UserRole) {
   const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [ready, setReady] = useState(false);
+  const { accessToken, user, ready } = useAuth();
 
   useEffect(() => {
-    const stored = readSession();
+    if (!ready) return; // still loading
 
-    if (!stored) {
+    if (!accessToken || !user) {
       router.replace('/login');
       return;
     }
 
-    if (requiredRole && stored.user.role !== requiredRole) {
+    if (requiredRole && user.role !== requiredRole) {
       router.replace('/dashboard');
-      return;
     }
+  }, [ready, accessToken, user, requiredRole, router]);
 
-    setSession(stored);
-    setReady(true);
-  }, [router, requiredRole]);
+  // Return a shape compatible with the old { session, ready } contract so
+  // pages don't all need to be updated at once.
+  const session =
+    accessToken && user
+      ? { accessToken, user }
+      : null;
 
   return { session, ready };
 }

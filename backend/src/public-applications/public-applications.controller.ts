@@ -6,8 +6,10 @@ import {
   TeacherApplicationDto,
 } from './public-applications.dto.js';
 import { PublicApplicationsService } from './public-applications.service.js';
+import { SkipCsrf } from '../common/decorators/skip-csrf.decorator.js';
 
 @ApiTags('Public applications')
+@SkipCsrf()
 @Controller('api/public')
 export class PublicApplicationsController {
   constructor(private readonly applicationsService: PublicApplicationsService) {}

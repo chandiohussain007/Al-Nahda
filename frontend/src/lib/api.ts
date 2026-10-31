@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { clearSession, readSession } from './session';
+import { clearStoredUser } from './session';
+import { getCsrfCookie } from '../context/AuthContext';
 import type {
   AdminStudentDetail,
   Assessment,
@@ -37,33 +38,110 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '
 export const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
+  // Always send cookies (httpOnly refresh token + csrf-token) on every request.
+  withCredentials: true,
 });
 
-// Attach the internal JWT to every request.
+/**
+ * The AuthContext registers this callback once it mounts so the Axios
+ * interceptors can read the latest in-memory access token without causing a
+ * circular import.
+ */
+let _getAccessToken: (() => string | null) | null = null;
+let _refreshSession: (() => Promise<string | null>) | null = null;
+
+export function registerTokenAccessor(
+  getter: () => string | null,
+  refresher: () => Promise<string | null>,
+) {
+  _getAccessToken = getter;
+  _refreshSession = refresher;
+}
+
+// Attach the in-memory access token + CSRF header to every outgoing request.
 api.interceptors.request.use((config) => {
-  const session = readSession();
-  if (session) {
-    config.headers.Authorization = `Bearer ${session.accessToken}`;
+  const token = _getAccessToken?.();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Mirror the csrf-token cookie in the X-CSRF-Token header for all
+  // state-changing requests (POST/PUT/PATCH/DELETE).
+  const csrfToken = getCsrfCookie();
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
   }
   return config;
 });
 
-// Expired/invalid token: drop the session, and return to the login screen
-// unless we are already there (so the form can still show the error).
+// On 401: try a silent refresh once, then replay the original request.
+// If the refresh also fails, redirect to /login.
+let isRefreshing = false;
+let pendingQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
+
+function processQueue(token: string | null, error: unknown = null) {
+  pendingQueue.forEach(({ resolve, reject }) => {
+    if (token) resolve(token);
+    else reject(error);
+  });
+  pendingQueue = [];
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
+  async (error: unknown) => {
     if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 401 &&
-      typeof window !== 'undefined'
+      !axios.isAxiosError(error) ||
+      error.response?.status !== 401 ||
+      typeof window === 'undefined'
     ) {
-      clearSession();
+      return Promise.reject(error);
+    }
 
+    const originalRequest = error.config;
+
+    // Don't retry the refresh endpoint itself to avoid infinite loops.
+    if (originalRequest?.url?.includes('/api/auth/refresh')) {
+      clearStoredUser();
+      window.location.assign('/login');
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      // Queue concurrent 401s while a refresh is already in flight.
+      return new Promise((resolve, reject) => {
+        pendingQueue.push({
+          resolve: (token) => {
+            if (originalRequest) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            resolve(api(originalRequest!));
+          },
+          reject,
+        });
+      });
+    }
+
+    isRefreshing = true;
+    try {
+      const newToken = await _refreshSession?.();
+      if (!newToken) throw new Error('No token after refresh');
+      processQueue(newToken);
+      if (originalRequest) {
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        originalRequest.headers['X-CSRF-Token'] = getCsrfCookie();
+        return api(originalRequest);
+      }
+    } catch (refreshError) {
+      processQueue(null, refreshError);
+      clearStoredUser();
       if (!window.location.pathname.startsWith('/login')) {
         window.location.assign('/login');
       }
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
     }
+
     return Promise.reject(error);
   },
 );
@@ -84,6 +162,9 @@ type AnyRecord = Record<string, unknown>;
 // --- auth -------------------------------------------------------------------
 export const loginWithGoogle = (idToken: string) =>
   api.post<LoginResponse>('/api/auth/google', { idToken }).then((r) => r.data);
+
+export const logoutApi = () =>
+  api.post('/api/auth/logout').then((r) => r.data);
 
 // --- health -----------------------------------------------------------------
 export const fetchHealth = () => api.get<AnyRecord>('/api/health').then((r) => r.data);

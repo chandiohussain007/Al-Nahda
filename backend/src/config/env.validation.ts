@@ -1,4 +1,9 @@
-const REQUIRED_IN_PRODUCTION = ['DATABASE_URL', 'JWT_SECRET', 'GOOGLE_CLIENT_ID'];
+const REQUIRED_IN_PRODUCTION = [
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'JWT_REFRESH_SECRET',
+  'GOOGLE_CLIENT_ID',
+];
 const INSECURE_JWT_SECRETS = new Set(['', 'dev-secret-key', 'replace-with-your-secret']);
 
 /**
@@ -23,6 +28,11 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   const jwtSecret = String(config.JWT_SECRET);
   if (INSECURE_JWT_SECRETS.has(jwtSecret) || jwtSecret.length < 16) {
     throw new Error('JWT_SECRET must be a strong, unique value in production');
+  }
+
+  const refreshSecret = String(config.JWT_REFRESH_SECRET);
+  if (INSECURE_JWT_SECRETS.has(refreshSecret) || refreshSecret.length < 16) {
+    throw new Error('JWT_REFRESH_SECRET must be a strong, unique value in production');
   }
 
   const port = Number(config.PORT ?? 3000);

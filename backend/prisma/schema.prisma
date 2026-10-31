@@ -117,6 +117,26 @@ model User {
   // Assessment module relations
   studentEnrollments StudentEnrollment[] @relation("StudentEnrollments")
   attempts           Attempt[]           @relation("AttemptStudents")
+  // Auth security
+  refreshTokens      RefreshToken[]      @relation("UserRefreshTokens")
+}
+
+/// Hashed refresh tokens for secure httpOnly cookie auth.
+/// Each row is consumed (deleted) and replaced on every token rotation.
+/// Tokens within the same `family` are revoked together on theft detection.
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  family     String
+  deviceHint String?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user User @relation("UserRefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
 }
 
 model StudentProfile {
@@ -145,6 +165,7 @@ model TeacherProfile {
   cvUrl             String?
   availableTimeSlots String[]
   teacherStatus     TeacherStatus @default(PENDING)
+  zoomLink          String?
 
   user        User         @relation(fields: [userId], references: [id])
   enrollments Enrollment[]
@@ -199,11 +220,18 @@ model Enrollment {
   proposedFee       Int?
   agreedFee         Int?
   feeStatus         FeeStatus        @default(NONE)
+  paymentReceiptKey String?
+  paymentReference  String?
+  paymentSubmittedAt DateTime?
+  paymentApprovedAt  DateTime?
+  paymentApprovedBy  String?
   createdAt         DateTime         @default(now())
 
   student    StudentProfile @relation(fields: [studentId], references: [id])
   teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
   attendance Attendance[]
+  audioSubmissions AudioSubmission[]
+  hifzProgress     HifzProgress[]
 }
 
 model Attendance {
@@ -215,6 +243,7 @@ model Attendance {
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
 
   @@unique([enrollmentId, date])
+  @@index([enrollmentId, date])
 }
 
 model Notification {
@@ -227,6 +256,60 @@ model Notification {
 
   recipient User  @relation("NotificationRecipient", fields: [recipientId], references: [id])
   sender    User? @relation("NotificationSender", fields: [senderId], references: [id])
+
+  @@index([recipientId, isRead])
+  @@index([recipientId, createdAt])
+}
+
+// ─────────────────────────── Audio Homework & Submissions ───────────────────────────
+
+model AudioSubmission {
+  id           String    @id @default(uuid())
+  enrollmentId String
+  studentId    String
+  r2ObjectKey  String
+  publicUrl    String
+  durationSec  Int?
+  uploadedAt   DateTime  @default(now())
+  reviewedAt   DateTime?
+  teacherNote  String?
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([studentId])
+}
+
+// ─────────────────────────── Hifz Progress Tracker ───────────────────────────
+
+model HifzProgress {
+  id           String    @id @default(uuid())
+  studentId    String
+  enrollmentId String
+  date         DateTime  @default(now())
+
+  // Sabaq (New lesson)
+  sabaqSurah   Int?
+  sabaqFrom    Int?
+  sabaqTo      Int?
+
+  // Sabqi (Recent revision)
+  sabqiSurah   Int?
+  sabqiFrom    Int?
+  sabqiTo      Int?
+
+  // Manzil (Past revision)
+  manzilSurah  Int?
+  manzilFrom   Int?
+  manzilTo     Int?
+
+  teacherNotes String?
+  createdAt    DateTime  @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, date])
+  @@index([enrollmentId])
 }
 
 // ─────────────────────────── Assessment Module (new) ───────────────────────────

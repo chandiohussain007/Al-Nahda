@@ -1,9 +1,12 @@
 import { ValidationPipe } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import helmet from 'helmet';
 import * as Sentry from '@sentry/nestjs';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 import { maxUploadSize } from './common/max-upload.middleware.js';
 
@@ -29,14 +32,22 @@ async function bootstrap() {
   // Security headers: CSP, X-Frame-Options, HSTS, referrer policy, etc.
   app.use(helmet());
 
+  // Parse Cookie header so guards can read httpOnly refresh tokens and CSRF
+  // double-submit tokens without touching request bodies.
+  app.use(cookieParser());
+
+  // Compress all JSON API responses — ~70% bandwidth reduction for 1,000 users.
+  app.use(compression());
+
   // Reject multipart uploads over 1MB (media is URL-based today; this binds
   // any file-upload route added later).
   app.use(maxUploadSize);
 
   app.enableCors({
     origin: resolveCorsOrigins(),
-    credentials: true,
+    credentials: true, // required so browsers send httpOnly cookies cross-origin
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   });
 
   app.useGlobalPipes(
@@ -63,6 +74,7 @@ async function bootstrap() {
     .setDescription('Backend API for the Al Nahda learning platform')
     .setVersion('1.0')
     .addBearerAuth()
+    .addCookieAuth('refreshToken')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
