@@ -127,12 +127,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// ─── Default fallback for isolated unit testing & SSR ───────────────────────
+
+const defaultAuthContextValue: AuthContextValue = {
+  accessToken: null,
+  user: null,
+  ready: true,
+  setSession: () => {},
+  getAccessToken: () => null,
+  logout: async () => {},
+};
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-  return ctx;
+  return ctx ?? defaultAuthContextValue;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

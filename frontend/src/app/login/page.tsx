@@ -7,7 +7,7 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 import IslamicPattern from '@/components/decorative/IslamicPattern';
 import ErrorCard from '@/components/feedback/ErrorCard';
 import { apiErrorMessage, fetchHealth, loginWithGoogle } from '@/lib/api';
-import { dashboardPathFor } from '@/lib/session';
+import { dashboardPathFor, writeSession } from '@/lib/session';
 import { useAuth } from '@/context/AuthContext';
 
 type HealthState = 'checking' | 'up' | 'down';
@@ -51,6 +51,7 @@ export default function LoginPage() {
         // is set as an httpOnly cookie by the backend automatically.
         const result = await loginWithGoogle(idToken);
         setSession(result.accessToken, result.user);
+        writeSession(result);
         router.replace(dashboardPathFor(result.user.role));
       } catch (e) {
         setError(apiErrorMessage(e, 'Sign-in failed'));
