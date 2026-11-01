@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { clearStoredUser } from './session';
+import { clearSession, clearStoredUser, readSession } from './session';
 import { getCsrfCookie } from '../context/AuthContext';
 import type {
   AdminStudentDetail,
@@ -58,9 +58,9 @@ export function registerTokenAccessor(
   _refreshSession = refresher;
 }
 
-// Attach the in-memory access token + CSRF header to every outgoing request.
+// Attach the in-memory access token (or fallback to session) + CSRF header to every outgoing request.
 api.interceptors.request.use((config) => {
-  const token = _getAccessToken?.();
+  const token = _getAccessToken?.() || readSession()?.accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -123,7 +123,16 @@ api.interceptors.response.use(
 
     isRefreshing = true;
     try {
-      const newToken = await _refreshSession?.();
+      if (!_refreshSession) {
+        // No refresher registered (e.g. In unit test or before mount): clear session and reject
+        clearSession();
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.assign('/login');
+        }
+        return Promise.reject(error);
+      }
+
+      const newToken = await _refreshSession();
       if (!newToken) throw new Error('No token after refresh');
       processQueue(newToken);
       if (originalRequest) {
@@ -133,11 +142,11 @@ api.interceptors.response.use(
       }
     } catch (refreshError) {
       processQueue(null, refreshError);
-      clearStoredUser();
+      clearSession();
       if (!window.location.pathname.startsWith('/login')) {
         window.location.assign('/login');
       }
-      return Promise.reject(refreshError);
+      return Promise.reject(error);
     } finally {
       isRefreshing = false;
     }
