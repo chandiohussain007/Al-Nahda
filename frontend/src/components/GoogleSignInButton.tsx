@@ -10,12 +10,23 @@ interface Props {
   onError?: (error: Error) => void;
 }
 
+let gisLoadingPromise: Promise<void> | null = null;
+let lastInitializedClientId: string | null = null;
+
 function loadGisScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+
+  if (gisLoadingPromise) {
+    return gisLoadingPromise;
+  }
+
+  gisLoadingPromise = new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${GIS_SRC}"]`);
 
     if (existing) {
-      if (window.google) {
+      if (window.google?.accounts?.id) {
         resolve();
         return;
       }
@@ -32,6 +43,8 @@ function loadGisScript(): Promise<void> {
     script.onerror = () => reject(new Error('Could not load Google Sign-In'));
     document.head.appendChild(script);
   });
+
+  return gisLoadingPromise;
 }
 
 /**
@@ -62,10 +75,17 @@ export default function GoogleSignInButton({ onCredential, onError }: Props) {
       .then(() => {
         if (cancelled || !window.google || !containerRef.current) return;
 
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response) => callbackRef.current(response.credential),
-        });
+        // Prevent repeated initialization warnings and duplicate listeners in React StrictMode
+        if (lastInitializedClientId !== clientId) {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => callbackRef.current(response.credential),
+          });
+          lastInitializedClientId = clientId;
+        }
+
+        // Clear container before rendering to prevent double buttons in StrictMode
+        containerRef.current.innerHTML = '';
 
         window.google.accounts.id.renderButton(containerRef.current, {
           theme: 'outline',

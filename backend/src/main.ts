@@ -30,7 +30,13 @@ async function bootstrap() {
   app.set('trust proxy', true);
 
   // Security headers: CSP, X-Frame-Options, HSTS, referrer policy, etc.
-  app.use(helmet());
+  // COOP set to same-origin-allow-popups so Google Identity Services (GIS)
+  // popup postMessage is not blocked by modern browsers.
+  app.use(
+    helmet({
+      crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    }),
+  );
 
   // Parse Cookie header so guards can read httpOnly refresh tokens and CSRF
   // double-submit tokens without touching request bodies.
