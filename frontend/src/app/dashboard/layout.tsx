@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import AppNavbar from '@/components/layout/AppNavbar';
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -17,20 +18,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace('/login');
   };
 
-  // While checking refresh token or if not authenticated yet:
-  if (!ready) {
-    return (
-      <main className="container">
-        <SkeletonLoader rows={4} height="h-24" />
-      </main>
-    );
-  }
-
-  // Not signed in
-  if (!accessToken || !user) {
-    if (typeof window !== 'undefined') {
+  // Redirect to login only inside useEffect to avoid React setState-in-render errors
+  useEffect(() => {
+    if (ready && (!accessToken || !user)) {
       router.replace('/login');
     }
+  }, [ready, accessToken, user, router]);
+
+  // While checking refresh token or if not authenticated yet:
+  if (!ready || !accessToken || !user) {
     return (
       <main className="container">
         <SkeletonLoader rows={4} height="h-24" />
