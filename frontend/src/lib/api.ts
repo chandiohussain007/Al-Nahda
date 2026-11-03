@@ -206,9 +206,9 @@ export const fetchTeacherDirectory = (timeSlot?: string) =>
     .then((r) => r.data);
 
 // --- admin ------------------------------------------------------------------
-export const fetchAdminTeachers = (status?: TeacherStatus) =>
+export const fetchAdminTeachers = (status?: TeacherStatus, pagination?: { skip?: number; take?: number }) =>
   api
-    .get<TeacherProfile[]>('/api/admin/teachers', { params: status ? { status } : {} })
+    .get<TeacherProfile[]>('/api/admin/teachers', { params: { ...(status ? { status } : {}), ...(pagination ?? {}) } })
     .then((r) => r.data);
 
 export const createAdminTeacher = (dto: {
@@ -251,8 +251,8 @@ export const approveTeacher = (id: string) =>
 export const rejectTeacher = (id: string) =>
   api.patch<TeacherProfile>(`/api/admin/teachers/${id}/reject`).then((r) => r.data);
 
-export const fetchAdminStudents = () =>
-  api.get<StudentProfile[]>('/api/admin/students').then((r) => r.data);
+export const fetchAdminStudents = (pagination?: { skip?: number; take?: number }) =>
+  api.get<StudentProfile[]>('/api/admin/students', { params: pagination ?? {} }).then((r) => r.data);
 
 export const setAdminUserActive = (userId: string, isActive: boolean) =>
   api
@@ -262,9 +262,9 @@ export const setAdminUserActive = (userId: string, isActive: boolean) =>
 export const fetchAdminStudent = (id: string) =>
   api.get<AdminStudentDetail>(`/api/admin/students/${id}`).then((r) => r.data);
 
-export const fetchAdminEnrollments = (status?: EnrollmentStatus) =>
+export const fetchAdminEnrollments = (status?: EnrollmentStatus, pagination?: { skip?: number; take?: number }) =>
   api
-    .get<Enrollment[]>('/api/admin/enrollments', { params: status ? { status } : {} })
+    .get<Enrollment[]>('/api/admin/enrollments', { params: { ...(status ? { status } : {}), ...(pagination ?? {}) } })
     .then((r) => r.data);
 
 export const approveEnrollment = (id: string) =>

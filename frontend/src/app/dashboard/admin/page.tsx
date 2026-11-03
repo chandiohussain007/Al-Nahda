@@ -77,24 +77,34 @@ function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  // Optimized data loading: fetch overview metrics or active tab details on demand
+  const load = useCallback(async (targetTab: TabKey = tab) => {
     setLoading(true);
     try {
-      const [teacherRows, studentRows, enrollmentRows] = await Promise.all([
-        fetchAdminTeachers(teacherFilter || undefined),
-        fetchAdminStudents(),
-        fetchAdminEnrollments(),
-      ]);
-      setTeachers(teacherRows);
-      setStudents(studentRows);
-      setEnrollments(enrollmentRows);
+      if (targetTab === 'overview') {
+        // Load initial batch with reasonable limits for metrics
+        const [teacherRows, studentRows, enrollmentRows] = await Promise.all([
+          fetchAdminTeachers(undefined, { take: 100 }),
+          fetchAdminStudents({ take: 100 }),
+          fetchAdminEnrollments(undefined, { take: 50 }),
+        ]);
+        setTeachers(teacherRows);
+        setStudents(studentRows);
+        setEnrollments(enrollmentRows);
+      } else if (targetTab === 'teachers') {
+        const teacherRows = await fetchAdminTeachers(teacherFilter || undefined, { take: 100 });
+        setTeachers(teacherRows);
+      } else if (targetTab === 'students') {
+        const studentRows = await fetchAdminStudents({ take: 100 });
+        setStudents(studentRows);
+      }
       setError(null);
     } catch (e) {
       setError(apiErrorMessage(e, 'Could not load admin data'));
     } finally {
       setLoading(false);
     }
-  }, [teacherFilter]);
+  }, [tab, teacherFilter]);
 
   useEffect(() => {
     void load();
@@ -292,7 +302,7 @@ function AdminDashboard() {
         {TABS.map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); void load(t.key); }}
             className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
               tab === t.key
                 ? 'bg-white text-teal shadow-sm dark:bg-teal dark:text-white'
