@@ -102,7 +102,9 @@ api.interceptors.response.use(
     // Don't retry the refresh endpoint itself to avoid infinite loops.
     if (originalRequest?.url?.includes('/api/auth/refresh')) {
       clearStoredUser();
-      window.location.assign('/login');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login');
+      }
       return Promise.reject(error);
     }
 

@@ -96,8 +96,12 @@ export class RefreshTokenService {
       throw new UnauthorizedException('Refresh token invalid. Please log in again.');
     }
 
-    // 4. Consume this token (delete it — it will be replaced by a new one)
-    await this.prisma.refreshToken.delete({ where: { id: stored.id } });
+    // 4. Consume this token (safely delete it so concurrent calls don't crash)
+    try {
+      await this.prisma.refreshToken.deleteMany({ where: { id: stored.id } });
+    } catch {
+      // Record was already consumed or deleted by concurrent request
+    }
 
     return { userId, family };
   }

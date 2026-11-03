@@ -29,7 +29,8 @@ export default function LoginPage() {
 
   // Already signed in? Go straight to the dashboard.
   useEffect(() => {
-    if (ready && accessToken && user) {
+    if (!ready) return;
+    if (accessToken && user) {
       router.replace(dashboardPathFor(user.role));
     }
   }, [ready, accessToken, user, router]);
