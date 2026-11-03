@@ -14,9 +14,12 @@ import SkeletonLoader from '@/components/feedback/SkeletonLoader';
 import ErrorCard from '@/components/feedback/ErrorCard';
 import { useToast } from '@/components/feedback/Toast';
 import { LayoutDashboard, Users, GraduationCap, ClipboardList, BookOpen, Settings } from 'lucide-react';
+import Modal from '@/components/ui/Modal';
+import { UserPlus } from 'lucide-react';
 import {
   apiErrorMessage,
   approveTeacher,
+  createAdminTeacher,
   clearProfilePicture,
   clearTeacherCv,
   fetchAdminEnrollments,
@@ -60,6 +63,15 @@ function AdminDashboard() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
 
   const [teacherFilter, setTeacherFilter] = useState<TeacherStatus | ''>('');
+  const [showAddTeacherModal, setShowAddTeacherModal] = useState(false);
+  const [newTeacherForm, setNewTeacherForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    subject: '',
+    bio: '',
+  });
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -401,19 +413,29 @@ function AdminDashboard() {
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">Manage instructor profiles and approvals.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600 dark:text-gold-light/70">Filter:</span>
-                <Select
-                  value={teacherFilter}
-                  onChange={(e) => setTeacherFilter(e.target.value as TeacherStatus | '')}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowAddTeacherModal(true)}
+                  className="flex items-center gap-1.5"
                 >
-                  <option value="">All Statuses</option>
-                  {TEACHER_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </Select>
+                  <UserPlus className="h-4 w-4" /> Add Teacher
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600 dark:text-gold-light/70">Filter:</span>
+                  <Select
+                    value={teacherFilter}
+                    onChange={(e) => setTeacherFilter(e.target.value as TeacherStatus | '')}
+                  >
+                    <option value="">All Statuses</option>
+                    {TEACHER_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
               </div>
             </div>
 

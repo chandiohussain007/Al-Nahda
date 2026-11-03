@@ -16,7 +16,8 @@ import {
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Pagination } from '../common/pagination.dto.js';
-import { CreateCourseDto, ResolveFeeDto, UpdateCourseDto } from './admin.dto.js';
+import { CreateCourseDto, CreateTeacherDto, ResolveFeeDto, UpdateCourseDto } from './admin.dto.js';
+import bcrypt from 'bcrypt';
 
 const USER_SUMMARY_SELECT = {
   id: true,
@@ -105,6 +106,34 @@ export class AdminService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { isActive },
+      select: USER_SUMMARY_SELECT,
+    });
+  }
+
+  async createTeacher(dto: CreateTeacherDto) {
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictException('A user with this email already exists');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(dto.password, salt);
+
+    return this.prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: UserRole.TEACHER,
+        teacherProfile: {
+          create: {
+            fullName: dto.fullName.trim(),
+            experienceYears: 1,
+            bio: dto.bio?.trim() || (dto.subject ? 'Subject: ' + dto.subject : null),
+            teacherStatus: TeacherStatus.APPROVED,
+          },
+        },
+      },
       select: USER_SUMMARY_SELECT,
     });
   }

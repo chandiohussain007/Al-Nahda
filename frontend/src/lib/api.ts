@@ -169,6 +169,12 @@ export function apiErrorMessage(error: unknown, fallback = 'Request failed'): st
 type AnyRecord = Record<string, unknown>;
 
 // --- auth -------------------------------------------------------------------
+export const loginWithCredentials = (dto: { email: string; password: string }) =>
+  api.post<LoginResponse>('/api/auth/login', dto).then((r) => r.data);
+
+export const registerStudent = (dto: { fullName: string; email: string; password: string }) =>
+  api.post<LoginResponse>('/api/auth/register', dto).then((r) => r.data);
+
 export const loginWithGoogle = (idToken: string) =>
   api.post<LoginResponse>('/api/auth/google', { idToken }).then((r) => r.data);
 
@@ -204,6 +210,15 @@ export const fetchAdminTeachers = (status?: TeacherStatus) =>
   api
     .get<TeacherProfile[]>('/api/admin/teachers', { params: status ? { status } : {} })
     .then((r) => r.data);
+
+export const createAdminTeacher = (dto: {
+  fullName: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+  subject?: string;
+  bio?: string;
+}) => api.post<UserSummary>('/api/admin/teachers', dto).then((r) => r.data);
 
 export const fetchAdminCourses = () =>
   api.get<CourseItem[]>('/api/admin/courses').then((r) => r.data);

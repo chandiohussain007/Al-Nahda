@@ -3,10 +3,14 @@ import {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { api, apiErrorMessage, apiStatus } from './api';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readSession, writeSession } from './session';
+import { api, apiErrorMessage, apiStatus } from './api';
+import { registerTestTokenAccessor } from './__mocks__/apiConnectorMock';
 import type { Session } from './types';
+
+// Register a simple token accessor so the request interceptor can read JWTs.
+registerTestTokenAccessor();
 
 const originalAdapter = api.defaults.adapter;
 

@@ -1,30 +1,30 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { pushMock, replaceMock, submitStudentRegistrationMock, readSessionMock } = vi.hoisted(() => {
+const { replaceMock, registerStudentMock, readSessionMock, writeSessionMock } = vi.hoisted(() => {
   vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', 'test-client-id');
   return {
-    pushMock: vi.fn(),
     replaceMock: vi.fn(),
-    submitStudentRegistrationMock: vi.fn(),
+    registerStudentMock: vi.fn(),
     readSessionMock: vi.fn(),
+    writeSessionMock: vi.fn(),
   };
 });
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock, replace: replaceMock }),
+  useRouter: () => ({ replace: replaceMock }),
 }));
 
 vi.mock('@/lib/api', () => ({
   apiErrorMessage: (_error: unknown, fallback: string) => fallback,
   loginWithGoogle: vi.fn(),
-  submitStudentRegistration: submitStudentRegistrationMock,
+  registerStudent: registerStudentMock,
 }));
 
 vi.mock('@/lib/session', () => ({
   dashboardPathFor: () => '/dashboard/student',
   readSession: readSessionMock,
-  writeSession: vi.fn(),
+  writeSession: writeSessionMock,
 }));
 
 vi.mock('@/components/GoogleSignInButton', () => ({
@@ -51,29 +51,38 @@ describe('RegisterPage', () => {
     vi.clearAllMocks();
     vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', 'test-client-id');
     readSessionMock.mockReturnValue(null);
-    submitStudentRegistrationMock.mockResolvedValue({ message: 'sent' });
+    registerStudentMock.mockResolvedValue({
+      accessToken: 'token-reg-123',
+      user: { id: 'u-reg', email: 'aisha@example.com', role: 'STUDENT' },
+    });
   });
 
-  it('submits a student registration request and offers Google portal access on the same page', async () => {
+  it('registers a student with email/password and redirects to dashboard', async () => {
     render(<RegisterPage />);
 
-    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Aisha Rahman' } });
-    fireEvent.change(screen.getByLabelText('Email address'), {
+    fireEvent.change(screen.getByPlaceholderText('Your full name'), { target: { value: 'Aisha Rahman' } });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
       target: { value: 'aisha@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Course of interest'), {
-      target: { value: 'Quran Recitation & Tajweed' },
+    fireEvent.change(screen.getByPlaceholderText('At least 6 characters'), {
+      target: { value: 'Secret123!' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Send registration request' }));
+    fireEvent.change(screen.getByPlaceholderText('Re-enter password'), {
+      target: { value: 'Secret123!' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Register with Email' }));
 
     await waitFor(() => {
-      expect(submitStudentRegistrationMock).toHaveBeenCalledWith({
+      expect(registerStudentMock).toHaveBeenCalledWith({
         fullName: 'Aisha Rahman',
         email: 'aisha@example.com',
-        preferredCourse: 'Quran Recitation & Tajweed',
+        password: 'Secret123!',
       });
+      expect(writeSessionMock).toHaveBeenCalled();
+      expect(replaceMock).toHaveBeenCalledWith('/dashboard/student');
     });
-    expect(await screen.findByText('Registration request sent')).toBeTruthy();
+
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeTruthy();
   });
 });

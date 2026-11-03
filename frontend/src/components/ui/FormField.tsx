@@ -2,10 +2,16 @@
 
 import React, { useId } from 'react';
 
+export interface FormFieldControlProps {
+  id: string;
+  'aria-describedby'?: string;
+  'aria-invalid': boolean;
+}
+
 interface FormFieldProps {
   label: string;
-  /** Receives the generated id so label and control are linked. */
-  children: (props: { id: string; describedBy?: string; invalid: boolean }) => React.ReactNode;
+  /** Receives the generated id and standard ARIA attributes so label and control are linked. */
+  children: (props: FormFieldControlProps) => React.ReactNode;
   error?: string;
   hint?: string;
   className?: string;
@@ -26,7 +32,11 @@ export default function FormField({ label, children, error, hint, className = ''
       <label htmlFor={id} className="text-xs font-semibold text-charcoal dark:text-ivory">
         {label}
       </label>
-      {children({ id, describedBy, invalid })}
+      {children({
+        id,
+        'aria-describedby': describedBy,
+        'aria-invalid': invalid,
+      })}
       {hint && !error && (
         <p id={hintId} className="text-xs text-slate-500 dark:text-gold-light/70">
           {hint}

@@ -7,8 +7,9 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 import IslamicPattern from '@/components/decorative/IslamicPattern';
 import ErrorCard from '@/components/feedback/ErrorCard';
 import Button from '@/components/ui/Button';
-import { apiErrorMessage, loginWithGoogle, submitStudentRegistration } from '@/lib/api';
+import { apiErrorMessage, loginWithGoogle, registerStudent } from '@/lib/api';
 import { dashboardPathFor, readSession, writeSession } from '@/lib/session';
+import { useAuth } from '@/context/AuthContext';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 const CLIENT_ID_CONFIGURED = Boolean(
@@ -17,10 +18,10 @@ const CLIENT_ID_CONFIGURED = Boolean(
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ fullName: '', email: '', preferredCourse: '' });
+  const { setSession } = useAuth();
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     const session = readSession();
@@ -33,29 +34,47 @@ export default function RegisterPage() {
       setError(null);
       try {
         const session = await loginWithGoogle(idToken);
-        writeSession(session);
+        setSession(session.accessToken, session.user);
+      writeSession(session);
         router.replace(dashboardPathFor(session.user.role));
       } catch (e) {
         setError(apiErrorMessage(e, 'Sign-in failed'));
         setBusy(false);
       }
     },
-    [router],
+    [router, setSession],
   );
+
   const handleGoogleError = useCallback((googleError: Error) => {
     setError(googleError.message);
   }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
     setError(null);
+
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setBusy(true);
     try {
-      await submitStudentRegistration(form);
-      setSuccess(true);
+      const session = await registerStudent({
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+      });
+      setSession(session.accessToken, session.user);
+      writeSession(session);
+      router.replace(dashboardPathFor(session.user.role));
     } catch (e) {
-      setError(apiErrorMessage(e, 'Could not send your registration request'));
-    } finally {
+      setError(apiErrorMessage(e, 'Registration failed'));
       setBusy(false);
     }
   }
@@ -63,99 +82,120 @@ export default function RegisterPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-deep px-4 py-10">
       <IslamicPattern opacity={0.12} />
-      <section className="relative w-full max-w-xl rounded-2xl border border-gold/30 bg-surface p-8 shadow-2xl dark:bg-primary">
+      <section className="relative w-full max-w-md rounded-2xl border border-gold/30 bg-surface p-8 shadow-2xl dark:bg-primary">
         <header className="mb-6 text-center">
-          <Link href="/" className="font-serif text-3xl font-bold tracking-wide text-primary dark:text-gold">
+          <Link href="/" className="font-serif text-3xl font-bold tracking-wide text-primary dark:text-gold hover:opacity-90">
             Al Nahda
           </Link>
-          <h1 className="mt-4 font-serif text-2xl font-bold text-primary dark:text-ivory">
-            Student registration
+          <h1 className="mt-2 text-xl font-bold text-charcoal dark:text-ivory">
+            Create an Account
           </h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-gold-light/80">
-            Send us your course interest, then use Google to create or access your portal account.
+          <p className="mt-1 text-sm text-slate-600 dark:text-gold-light/80">
+            Join Al Nahda as a student and start your learning journey.
           </p>
         </header>
 
         {error && <ErrorCard message={error} className="mb-4" />}
-        {success ? (
-          <div role="status" className="rounded-lg border border-teal/30 bg-teal/5 p-4 text-center">
-            <h2 className="font-semibold text-primary dark:text-gold">Registration request sent</h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-gold-light/80">
-              The Al Nahda team has received your course interest. To open the portal, continue with
-              Google below using the email address you want associated with your account.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <label className="block text-sm font-medium text-charcoal dark:text-ivory">
-              Full name
-              <input
-                required
-                minLength={2}
-                maxLength={120}
-                autoComplete="name"
-                value={form.fullName}
-                onChange={(event) => setForm({ ...form, fullName: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-sandstone bg-white px-3 py-2.5 text-charcoal dark:border-gold/30 dark:bg-deep dark:text-ivory"
-              />
-            </label>
-            <label className="block text-sm font-medium text-charcoal dark:text-ivory">
-              Email address
-              <input
-                required
-                type="email"
-                maxLength={254}
-                autoComplete="email"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-sandstone bg-white px-3 py-2.5 text-charcoal dark:border-gold/30 dark:bg-deep dark:text-ivory"
-              />
-            </label>
-            <label className="block text-sm font-medium text-charcoal dark:text-ivory">
-              Course of interest
-              <select
-                required
-                value={form.preferredCourse}
-                onChange={(event) => setForm({ ...form, preferredCourse: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-sandstone bg-white px-3 py-2.5 text-charcoal dark:border-gold/30 dark:bg-deep dark:text-ivory"
-              >
-                <option value="" disabled>Select a course</option>
-                <option>Quran Recitation &amp; Tajweed</option>
-                <option>Classical Arabic</option>
-              </select>
-            </label>
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? 'Sending request…' : 'Send registration request'}
-            </Button>
-          </form>
-        )}
 
-        <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wider text-slate-400">
-          <span className="h-px flex-1 bg-sandstone dark:bg-gold/20" />
-          Portal access
-          <span className="h-px flex-1 bg-sandstone dark:bg-gold/20" />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-charcoal dark:text-ivory">
+              Full name
+            </label>
+            <input
+              required
+              minLength={2}
+              maxLength={120}
+              autoComplete="name"
+              placeholder="Your full name"
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+              className="mt-1 w-full rounded-md border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal placeholder:text-slate-400 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/30 dark:border-gold/30 dark:bg-deep dark:text-ivory"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-charcoal dark:text-ivory">
+              Email address
+            </label>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="mt-1 w-full rounded-md border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal placeholder:text-slate-400 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/30 dark:border-gold/30 dark:bg-deep dark:text-ivory"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-charcoal dark:text-ivory">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              placeholder="At least 6 characters"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="mt-1 w-full rounded-md border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal placeholder:text-slate-400 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/30 dark:border-gold/30 dark:bg-deep dark:text-ivory"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-charcoal dark:text-ivory">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              placeholder="Re-enter password"
+              value={form.confirmPassword}
+              onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+              className="mt-1 w-full rounded-md border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal placeholder:text-slate-400 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/30 dark:border-gold/30 dark:bg-deep dark:text-ivory"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={busy || !form.fullName || !form.email || !form.password}
+            className="w-full mt-2"
+          >
+            {busy ? 'Creating account…' : 'Register with Email'}
+          </Button>
+        </form>
+
+        <div className="relative my-6 text-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-sandstone dark:border-gold/20" />
+          </div>
+          <span className="relative bg-surface px-3 text-xs font-medium uppercase tracking-wider text-slate-500 dark:bg-primary dark:text-gold-light/70">
+            Or sign up with
+          </span>
         </div>
-        <p className="mb-3 text-center text-sm text-slate-600 dark:text-gold-light/80">
-          Already have an account? Sign in with Google. Your role is assigned automatically.
-        </p>
+
         {CLIENT_ID_CONFIGURED ? (
-          <div className="flex justify-center rounded-lg border border-sandstone bg-white/70 py-3 dark:border-gold/25 dark:bg-deep/60">
+          <div
+            aria-busy={busy}
+            className="flex justify-center rounded-lg border border-sandstone bg-white/70 py-2.5 dark:border-gold/25 dark:bg-deep/60"
+          >
             <GoogleSignInButton onCredential={handleCredential} onError={handleGoogleError} />
           </div>
         ) : (
-          <ErrorCard
-            title="Google Sign-In is not configured"
-            message="Set NEXT_PUBLIC_GOOGLE_CLIENT_ID in the frontend environment to enable portal access."
-          />
+          <p className="text-center text-xs text-slate-500">Google sign-in is not configured.</p>
         )}
-        <p className="mt-5 text-center text-sm text-slate-600 dark:text-gold-light/80">
-          Want to teach?{' '}
-          <Link href="/careers" className="font-semibold text-teal hover:underline dark:text-gold">
-            Join our team
+
+        <p className="mt-6 text-center text-sm text-slate-600 dark:text-gold-light/80">
+          Already registered?{' '}
+          <Link href="/login" className="font-semibold text-teal hover:underline dark:text-gold">
+            Sign in
           </Link>
-        </p>
-        <p className="mt-3 text-center text-sm text-slate-600 dark:text-gold-light/80">
-          <Link href="/" className="hover:underline">Back to Al Nahda</Link>
         </p>
       </section>
     </main>

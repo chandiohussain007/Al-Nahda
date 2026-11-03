@@ -6,8 +6,15 @@ import { UsersService } from '../users/users.service.js';
 import { AuthService } from './auth.service.js';
 import { GoogleTokenService } from './google-token.service.js';
 import { RefreshTokenService } from './refresh-token.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 const jwtServiceMock = { sign: vi.fn() };
+const prismaServiceMock = {
+  user: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+  },
+};
 const googleTokenServiceMock = { verifyIdToken: vi.fn() };
 const usersServiceMock = { upsertFromGoogle: vi.fn() };
 const configServiceMock = { get: vi.fn().mockReturnValue('15m') };
@@ -27,6 +34,7 @@ describe('AuthService', () => {
         { provide: ConfigService, useValue: configServiceMock },
         { provide: GoogleTokenService, useValue: googleTokenServiceMock },
         { provide: UsersService, useValue: usersServiceMock },
+        { provide: PrismaService, useValue: prismaServiceMock },
         { provide: RefreshTokenService, useValue: refreshTokenServiceMock },
       ],
     }).compile();

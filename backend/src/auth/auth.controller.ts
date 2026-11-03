@@ -12,7 +12,7 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
-import { GoogleLoginDto } from './auth.dto.js';
+import { GoogleLoginDto, LoginDto, RegisterDto } from './auth.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { CurrentUser } from './decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface.js';
@@ -52,6 +52,46 @@ export function csrfCookieOptions() {
 @Controller('api/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  /**
+   * Standard email + password registration for students.
+   */
+  @Post('register')
+  @SkipCsrf()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new student with email and password' })
+  @ApiResponse({ status: 201, description: 'Student registered and session issued' })
+  @ApiResponse({ status: 409, description: 'Email already exists' })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.register(dto);
+    res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions());
+    res.cookie(CSRF_COOKIE, result.csrfToken, csrfCookieOptions());
+    return { accessToken: result.accessToken, user: result.user };
+  }
+
+  /**
+   * Standard email + password login.
+   */
+  @Post('login')
+  @SkipCsrf()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'Authenticated successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid email or password' })
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(dto);
+    res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions());
+    res.cookie(CSRF_COOKIE, result.csrfToken, csrfCookieOptions());
+    return { accessToken: result.accessToken, user: result.user };
+  }
 
   /**
    * Exchange a Google ID token for an access token (JSON) + refresh token (httpOnly cookie).

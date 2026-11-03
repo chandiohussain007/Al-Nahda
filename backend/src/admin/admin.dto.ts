@@ -128,3 +128,41 @@ export class UpdateCourseDto {
   @IsEnum(CourseStatus)
   status?: CourseStatus;
 }
+
+export class CreateTeacherDto {
+  @ApiProperty({ example: 'Sheikh Ahmad Al-Mansoor', description: 'Full name of the teacher' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  fullName: string;
+
+  @ApiProperty({ example: 'ahmad.teacher@alnahda.org', description: 'Teacher email address' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(255)
+  email: string;
+
+  @ApiProperty({ example: 'TeacherPass123!', description: 'Temporary password for the teacher' })
+  @IsString()
+  @MinLength(6)
+  @MaxLength(100)
+  password: string;
+
+  @ApiPropertyOptional({ example: '+966500000000', description: 'WhatsApp contact number' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phoneNumber?: string;
+
+  @ApiPropertyOptional({ example: 'Tajweed and Quran Memorization', description: 'Subjects taught' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  subject?: string;
+
+  @ApiPropertyOptional({ example: '10 years teaching at Al-Azhar', description: 'Teacher bio or background' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  bio?: string;
+}

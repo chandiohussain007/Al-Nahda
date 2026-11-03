@@ -22,6 +22,7 @@ import {
   ListStudentsQueryDto,
   ListTeachersQueryDto,
   CreateCourseDto,
+  CreateTeacherDto,
   ResolveFeeDto,
   SetCvDto,
   SetProfilePictureDto,
@@ -73,6 +74,12 @@ export class AdminController {
     @CurrentUser() actor: AuthenticatedUser,
   ) {
     return this.adminService.setUserActive(id, dto.isActive, actor.sub);
+  }
+
+  @Post('teachers')
+  @ApiOperation({ summary: 'Create and activate a teacher account with password' })
+  createTeacher(@Body() dto: CreateTeacherDto) {
+    return this.adminService.createTeacher(dto);
   }
 
   @Get('teachers')
