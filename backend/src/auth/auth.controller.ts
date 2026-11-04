@@ -31,7 +31,7 @@ export function refreshCookieOptions() {
   return {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax' as const,
+    sameSite: (IS_PROD ? 'none' : 'lax') as 'none' | 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     path: '/',
   };
@@ -42,7 +42,7 @@ export function csrfCookieOptions() {
   return {
     httpOnly: false,
     secure: IS_PROD,
-    sameSite: 'lax' as const,
+    sameSite: (IS_PROD ? 'none' : 'lax') as 'none' | 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };

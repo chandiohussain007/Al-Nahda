@@ -35,6 +35,14 @@ export class CsrfGuard implements CanActivate {
     const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
     if (safeMethods.includes(req.method)) return true;
 
+    // Requests carrying a Bearer token in the Authorization header are SPA API
+    // calls authenticated explicitly by client JavaScript, making them immune to
+    // ambient-credential CSRF browser attacks.
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return true;
+    }
+
     const cookieToken = (req.cookies as Record<string, string>)?.['csrf-token'];
     const headerToken = req.headers['x-csrf-token'];
 

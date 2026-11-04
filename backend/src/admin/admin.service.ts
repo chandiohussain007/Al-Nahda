@@ -129,6 +129,8 @@ export class AdminService {
           create: {
             fullName: dto.fullName.trim(),
             experienceYears: 1,
+            phoneNumber: dto.phoneNumber?.trim() || null,
+            subjectsTaught: dto.subject?.trim() ? [dto.subject.trim()] : [],
             bio: dto.bio?.trim() || (dto.subject ? 'Subject: ' + dto.subject : null),
             teacherStatus: TeacherStatus.APPROVED,
           },

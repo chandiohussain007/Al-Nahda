@@ -204,7 +204,7 @@ function AdminDashboard() {
     { key: 'email', header: 'Email', render: (t) => <div className="text-sm text-slate-500">{t.user?.email ?? '—'}</div> },
     { key: 'account', header: 'Account', render: (t) => <span className={t.user?.isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}>{t.user?.isActive ? 'Active' : 'Deactivated'}</span> },
     { key: 'phone', header: 'Phone', secondary: true, render: (t) => t.phoneNumber ?? '—' },
-    { key: 'subjects', header: 'Subjects', secondary: true, render: (t) => t.subjectsTaught.join(', ') || '—' },
+    { key: 'subjects', header: 'Subjects', secondary: true, render: (t) => t.subjectsTaught?.join(', ') || '—' },
     { key: 'exp', header: 'Experience', secondary: true, render: (t) => `${t.experienceYears} yrs` },
     { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.teacherStatus ?? 'PENDING'} /> },
     {
