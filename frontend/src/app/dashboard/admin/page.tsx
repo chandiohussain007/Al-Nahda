@@ -149,6 +149,22 @@ function AdminDashboard() {
     );
   }
 
+  async function handleAddTeacher(e: React.FormEvent) {
+    e.preventDefault();
+    await act('Teacher account created.', async () => {
+      await createAdminTeacher({
+        fullName: newTeacherForm.fullName,
+        email: newTeacherForm.email,
+        password: newTeacherForm.password,
+        phoneNumber: newTeacherForm.phoneNumber || undefined,
+        subject: newTeacherForm.subject || undefined,
+        bio: newTeacherForm.bio || undefined,
+      });
+      setShowAddTeacherModal(false);
+      setNewTeacherForm({ fullName: '', email: '', password: '', phoneNumber: '', subject: '', bio: '' });
+    });
+  }
+
   async function changeAccountStatus(
     userId: string | undefined,
     name: string,
@@ -474,6 +490,103 @@ function AdminDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Add Teacher Modal */}
+      <Modal
+        open={showAddTeacherModal}
+        onClose={() => setShowAddTeacherModal(false)}
+        title="Add New Teacher"
+        footer={
+          <>
+            <Button variant="ghost" type="button" onClick={() => setShowAddTeacherModal(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form="add-teacher-form" disabled={busy}>
+              {busy ? 'Creating…' : 'Create Teacher'}
+            </Button>
+          </>
+        }
+      >
+        <form id="add-teacher-form" onSubmit={(e) => void handleAddTeacher(e)} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              minLength={2}
+              maxLength={120}
+              value={newTeacherForm.fullName}
+              onChange={(e) => setNewTeacherForm((f) => ({ ...f, fullName: e.target.value }))}
+              placeholder="Sheikh Ahmad Al-Mansoor"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              required
+              maxLength={255}
+              value={newTeacherForm.email}
+              onChange={(e) => setNewTeacherForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="teacher@alnahda.org"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Password <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              maxLength={100}
+              value={newTeacherForm.password}
+              onChange={(e) => setNewTeacherForm((f) => ({ ...f, password: e.target.value }))}
+              placeholder="Minimum 6 characters"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">Phone Number</label>
+            <input
+              type="tel"
+              maxLength={40}
+              value={newTeacherForm.phoneNumber}
+              onChange={(e) => setNewTeacherForm((f) => ({ ...f, phoneNumber: e.target.value }))}
+              placeholder="+966500000000"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">Subject(s)</label>
+            <input
+              type="text"
+              maxLength={200}
+              value={newTeacherForm.subject}
+              onChange={(e) => setNewTeacherForm((f) => ({ ...f, subject: e.target.value }))}
+              placeholder="Tajweed and Quran Memorization"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">Bio</label>
+            <textarea
+              rows={3}
+              maxLength={500}
+              value={newTeacherForm.bio}
+              onChange={(e) => setNewTeacherForm((f) => ({ ...f, bio: e.target.value }))}
+              placeholder="Brief introduction about the teacher…"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
