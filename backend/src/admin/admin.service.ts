@@ -6,17 +6,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Course,
   CourseStatus,
   EnrollmentStatus,
   FeeStatus,
+  Level,
   Prisma,
   TeacherStatus,
   UserRole,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { findUsersByIdsOrNumbers, getUserIdNumber } from '../common/user-id.util.js';
+import { SendAdminNotificationDto } from './admin.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Pagination } from '../common/pagination.dto.js';
-import { CreateCourseDto, CreateTeacherDto, ResolveFeeDto, UpdateCourseDto } from './admin.dto.js';
+import { CreateCourseDto, CreateTeacherDto, AssignTeacherToStudentDto, ResolveFeeDto, UpdateCourseDto } from './admin.dto.js';
 import bcrypt from 'bcrypt';
 
 const USER_SUMMARY_SELECT = {
@@ -26,6 +30,23 @@ const USER_SUMMARY_SELECT = {
   createdAt: true,
   isActive: true,
 } as const;
+
+export async function attachUserIdNumbers<T extends { user?: { id: string } | null; userId?: string }>(
+  prisma: any,
+  items: T[],
+): Promise<(T & { userIdNumber?: string })[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      const uId = item.user?.id || item.userId;
+      const num = uId ? await getUserIdNumber(prisma, uId) : undefined;
+      return {
+        ...item,
+        userIdNumber: num,
+        user: item.user ? { ...item.user, userIdNumber: num } : item.user,
+      };
+    }),
+  );
+}
 
 @Injectable()
 export class AdminService {
@@ -140,13 +161,14 @@ export class AdminService {
     });
   }
 
-  listTeachers(status?: TeacherStatus, pagination?: Pagination) {
-    return this.prisma.teacherProfile.findMany({
+  async listTeachers(status?: TeacherStatus, pagination?: Pagination) {
+    const teachers = await this.prisma.teacherProfile.findMany({
       where: status ? { teacherStatus: status } : {},
       include: { user: { select: USER_SUMMARY_SELECT } },
       orderBy: { fullName: 'asc' },
       ...pagination,
     });
+    return attachUserIdNumbers(this.prisma, teachers);
   }
 
   async setTeacherStatus(teacherId: string, teacherStatus: TeacherStatus) {
@@ -168,12 +190,13 @@ export class AdminService {
     return updated;
   }
 
-  listStudents(pagination?: Pagination) {
-    return this.prisma.studentProfile.findMany({
+  async listStudents(pagination?: Pagination) {
+    const students = await this.prisma.studentProfile.findMany({
       include: { user: { select: USER_SUMMARY_SELECT } },
       orderBy: { fullName: 'asc' },
       ...pagination,
     });
+    return attachUserIdNumbers(this.prisma, students);
   }
 
   async getStudent(studentId: string) {
@@ -194,6 +217,71 @@ export class AdminService {
     }
 
     return student;
+  }
+
+  async assignTeacherToStudent(
+    studentId: string,
+    dto: AssignTeacherToStudentDto,
+    actorId: string,
+  ) {
+    const student = await this.prisma.studentProfile.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { id: true, isActive: true } } },
+    });
+    if (!student) throw new NotFoundException('Student profile not found');
+    if (!student.user?.isActive) throw new ForbiddenException('Student account is not active');
+
+    const teacher = await this.prisma.teacherProfile.findUnique({
+      where: { id: dto.teacherId },
+      include: { user: { select: { id: true, isActive: true } } },
+    });
+    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (teacher.teacherStatus !== 'APPROVED') {
+      throw new ForbiddenException('Teacher is not approved');
+    }
+    if (!teacher.user?.isActive) throw new ForbiddenException('Teacher account is not active');
+
+    // Prevent duplicate active enrollment for same student+teacher
+    const existing = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId: student.id,
+        teacherId: teacher.id,
+        status: { in: ['PENDING', 'ACTIVE'] },
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'An active or pending enrollment already exists between this student and teacher',
+      );
+    }
+
+    const enrollment = await this.prisma.enrollment.create({
+      data: {
+        studentId: student.id,
+        teacherId: teacher.id,
+        courseName: dto.courseName as Course,
+        confirmedLevel: dto.confirmedLevel as Level,
+        preferredTimeSlot: dto.preferredTimeSlot,
+        status: EnrollmentStatus.ACTIVE,
+        proposedFee: null,
+        feeStatus: 'NONE',
+      },
+      include: { student: true, teacher: true },
+    });
+
+    await this.notificationsService.create({
+      recipientId: student.userId,
+      senderId: actorId,
+      message: `You have been assigned to ${teacher.fullName} for ${dto.courseName} (${dto.confirmedLevel}). Classes at ${dto.preferredTimeSlot}.`,
+    });
+
+    await this.notificationsService.create({
+      recipientId: teacher.userId,
+      senderId: actorId,
+      message: `You have been assigned a new student: ${student.fullName} for ${dto.courseName} (${dto.confirmedLevel}). Classes at ${dto.preferredTimeSlot}.`,
+    });
+
+    return enrollment;
   }
 
   listEnrollments(status?: EnrollmentStatus, pagination?: Pagination) {
@@ -374,5 +462,32 @@ export class AdminService {
     }
 
     return enrollment;
+  }
+  async sendNotification(senderId: string, dto: SendAdminNotificationDto) {
+    const targetTokens = dto.recipientId
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    if (targetTokens.length === 0) {
+      throw new NotFoundException('Please specify at least one recipient User ID');
+    }
+
+    const matchedUsers = await findUsersByIdsOrNumbers(this.prisma, targetTokens);
+    if (matchedUsers.length === 0) {
+      throw new NotFoundException('No user found matching the provided User ID(s)');
+    }
+
+    const created = await Promise.all(
+      matchedUsers.map((recipient) =>
+        this.notificationsService.create({
+          recipientId: recipient.id,
+          senderId,
+          message: dto.message,
+        }),
+      ),
+    );
+
+    return { sentCount: created.length, recipients: matchedUsers.map((u) => u.userIdNumber) };
   }
 }

@@ -79,8 +79,10 @@ export class UpsertTeacherProfileDto {
 }
 
 export class SendTeacherNotificationDto {
-  @ApiProperty({ description: 'User id of the notification recipient' })
-  @IsUUID()
+  @ApiProperty({ description: 'Target 4-digit User ID(s) or UUID(s), comma-separated (e.g. "0003" or "0001,0002")' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
   recipientId: string;
 
   @ApiProperty({ example: 'Class moved to 6pm tomorrow.' })

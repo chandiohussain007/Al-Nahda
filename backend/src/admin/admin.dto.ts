@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsBoolean,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
@@ -165,4 +166,48 @@ export class CreateTeacherDto {
   @IsString()
   @MaxLength(2000)
   bio?: string;
+}
+
+export class SendAdminNotificationDto {
+  @ApiProperty({ description: 'Target 4-digit User ID(s) or UUID(s), comma-separated (e.g. "0003" or "0001,0002")' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  recipientId: string;
+
+  @ApiProperty({ example: 'Platform maintenance scheduled for tonight at 10 PM.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  message: string;
+}
+
+export class AssignTeacherToStudentDto {
+  @ApiProperty({ example: 'stu-123', description: 'Student profile ID' })
+  @IsString()
+  @IsNotEmpty()
+  studentId: string;
+
+  @ApiProperty({ example: 'tch-456', description: 'Teacher profile ID' })
+  @IsString()
+  @IsNotEmpty()
+  teacherId: string;
+
+  @ApiProperty({ example: 'LEARN_QURAN', description: 'Course name' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  courseName: string;
+
+  @ApiProperty({ example: 'BEGINNER', description: 'Confirmed level' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  confirmedLevel: string;
+
+  @ApiProperty({ example: 'Mon/Wed 18:00', description: 'Preferred time slot' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  preferredTimeSlot: string;
 }

@@ -248,7 +248,20 @@ function TeacherDashboard() {
   const pendingEnrollmentsCount = enrollments.filter(e => e.status === 'PENDING').length;
 
   const enrollmentColumns: Column<Enrollment>[] = [
-    { key: 'student', header: 'Student', render: (e) => e.student?.fullName ?? e.studentId },
+        {
+      key: 'student',
+      header: 'Student',
+      render: (e) => (
+        <div>
+          <div className="font-medium">{e.student?.fullName ?? e.studentId}</div>
+          {e.student?.userIdNumber && (
+            <div className="text-xs text-teal dark:text-gold font-mono font-bold">
+              ID: {e.student.userIdNumber}
+            </div>
+          )}
+        </div>
+      ),
+    },
     { key: 'course', header: 'Course', render: (e) => e.courseName },
     { key: 'level', header: 'Level', secondary: true, render: (e) => e.confirmedLevel },
     { key: 'slot', header: 'Time Slot', secondary: true, render: (e) => e.preferredTimeSlot },
@@ -324,6 +337,16 @@ function TeacherDashboard() {
 
       <div className="mt-6">
         {tab === 'overview' && (
+          <div className="space-y-6">
+            <div className="rounded-xl border border-teal/30 bg-teal/5 p-4 dark:border-gold/30 dark:bg-gold/5 flex items-center justify-between">
+              <div>
+                <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 dark:text-gold-light/70">Your Teacher ID</span>
+                <div className="text-2xl font-bold font-mono text-teal dark:text-gold">{profile?.user?.userIdNumber ?? 'Loading…'}</div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-gold-light/60 max-w-xs text-right">
+                Your 4-digit ID for receiving messages and platform notifications.
+              </p>
+            </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               label="Active Enrollments"
@@ -345,6 +368,7 @@ function TeacherDashboard() {
               value={profile ? profile.teacherStatus : 'No Profile'}
               caption="Admin approval state"
             />
+            </div>
           </div>
         )}
 
@@ -572,16 +596,33 @@ function TeacherDashboard() {
               Send a Notification
             </h2>
             <form onSubmit={(e) => void submitNotification(e)} className="space-y-4 max-w-xl">
-              <FormField label="Recipient User ID">
+              <FormField label="Recipient Student ID(s)">
                 {(p) => (
                   <Input
                     {...p}
                     value={recipientId}
                     onChange={(e) => setRecipientId(e.target.value)}
-                    placeholder="uuid of the user to notify"
+                    placeholder='Single "0003" or multiple comma-separated "0001,0002"'
                   />
                 )}
               </FormField>
+              <p className="text-xs text-slate-500 dark:text-gold-light/60">
+                You can only send notifications to students enrolled in your courses. Find their 4-digit ID in the Enrollments tab.
+              </p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
               <FormField label="Message">
                 {(p) => (

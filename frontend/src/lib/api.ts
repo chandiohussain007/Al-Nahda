@@ -295,6 +295,23 @@ export const saveTeacherProfile = (dto: UpsertTeacherProfile) =>
 export const sendTeacherNotification = (recipientId: string, message: string) =>
   api.post('/api/teacher/notifications', { recipientId, message }).then((r) => r.data);
 
+export const sendAdminNotification = (recipientId: string, message: string) =>
+  api.post('/api/admin/notifications', { recipientId, message }).then((r) => r.data);
+
+export const assignTeacherToStudent = (dto: {
+  studentId: string;
+  teacherId: string;
+  courseName: string;
+  confirmedLevel: string;
+  preferredTimeSlot: string;
+}) =>
+  api.post('/api/admin/students/:studentId/assign-teacher'.replace(':studentId', dto.studentId), {
+    teacherId: dto.teacherId,
+    courseName: dto.courseName,
+    confirmedLevel: dto.confirmedLevel,
+    preferredTimeSlot: dto.preferredTimeSlot,
+  }).then((r) => r.data);
+
 // --- enrollments ------------------------------------------------------------
 export const fetchMyEnrollments = () =>
   api.get<Enrollment[]>('/api/enrollment').then((r) => r.data);

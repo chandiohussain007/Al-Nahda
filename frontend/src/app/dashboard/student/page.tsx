@@ -36,6 +36,7 @@ import {
   type StudentProgress,
   type StudentProfile,
 } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
 
 export default function StudentPage() {
   return (
@@ -48,6 +49,7 @@ export default function StudentPage() {
 function StudentDashboard() {
   const router = useRouter();
   const { toast: showToast } = useToast();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [loading, setLoading] = useState(true);
@@ -177,8 +179,14 @@ function StudentDashboard() {
           Student dashboard
         </h1>
         <p className="m-0 text-sm text-slate-500 dark:text-gold-light/70">
-          Track your learning, keep your profile current, and take placement evaluations.
-        </p>
+            Track your learning, keep your profile current, and take placement evaluations.
+          </p>
+          {user?.userIdNumber && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-teal/30 bg-teal/5 px-3 py-1.5 text-xs text-teal dark:border-gold/30 dark:bg-gold/5 dark:text-gold">
+              <span className="font-semibold uppercase tracking-wider">Your Student ID:</span>
+              <span className="font-mono font-bold text-sm">{user.userIdNumber}</span>
+            </div>
+          )}
       </header>
 
       {error && <ErrorCard message={error} className="mb-2" />}

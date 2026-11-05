@@ -5,6 +5,7 @@ import { UserRole } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service.js';
+import { getUserIdNumber } from '../common/user-id.util.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { GoogleLoginDto, LoginDto, RegisterDto } from './auth.dto.js';
 import { GoogleTokenService } from './google-token.service.js';
@@ -20,7 +21,7 @@ export interface AuthResult {
   accessToken: string;
   refreshToken: string;
   csrfToken: string;
-  user: { id: string; email: string; role: UserRole };
+  user: { id: string; userIdNumber?: string; email: string; role: UserRole };
 }
 
 @Injectable()
@@ -55,12 +56,13 @@ export class AuthService {
     const accessToken = this.issueAccessToken(payload);
     const refreshToken = await this.refreshTokenService.createRefreshToken(userId);
     const csrfToken = randomUUID();
+    const userIdNumber = await getUserIdNumber(this.prisma, userId);
 
     return {
       accessToken,
       refreshToken,
       csrfToken,
-      user: { id: userId, email, role },
+      user: { id: userId, email, role, userIdNumber },
     };
   }
 
@@ -147,11 +149,13 @@ export class AuthService {
     const refreshToken = await this.refreshTokenService.createRefreshToken(user.id, family);
     const csrfToken = randomUUID();
 
+    const userIdNumber = await getUserIdNumber(this.prisma, user.id);
+
     return {
       accessToken,
       refreshToken,
       csrfToken,
-      user: { id: user.id, email: user.email, role: user.role },
+      user: { id: user.id, email: user.email, role: user.role, userIdNumber },
     };
   }
 

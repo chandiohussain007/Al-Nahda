@@ -21,6 +21,7 @@ export const ENROLLMENT_STATUSES: EnrollmentStatus[] = [
 ];
 
 export interface SessionUser {
+  userIdNumber?: string;
   id: string;
   email: string;
   role: UserRole;
@@ -37,6 +38,7 @@ export interface LoginResponse {
 }
 
 export interface UserSummary {
+  userIdNumber?: string;
   id: string;
   email: string;
   role: UserRole;
@@ -78,6 +80,7 @@ export interface StudentProfile {
 }
 
 export interface EnrollmentStudent {
+  userIdNumber?: string;
   id: string;
   fullName: string;
   userId?: string;

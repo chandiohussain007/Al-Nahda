@@ -5,6 +5,7 @@ import RequireRole from '@/components/RequireRole';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import StatCard from '@/components/data-display/StatCard';
 import StatusBadge from '@/components/data-display/StatusBadge';
@@ -13,12 +14,22 @@ import EmptyState from '@/components/feedback/EmptyState';
 import SkeletonLoader from '@/components/feedback/SkeletonLoader';
 import ErrorCard from '@/components/feedback/ErrorCard';
 import { useToast } from '@/components/feedback/Toast';
-import { LayoutDashboard, Users, GraduationCap, ClipboardList, BookOpen, Settings } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  ClipboardList,
+  BookOpen,
+  Settings,
+  Mail,
+  Smartphone,
+} from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { UserPlus } from 'lucide-react';
 import {
   apiErrorMessage,
   approveTeacher,
+  assignTeacherToStudent,
   createAdminTeacher,
   clearProfilePicture,
   clearTeacherCv,
@@ -26,13 +37,16 @@ import {
   fetchAdminStudents,
   fetchAdminTeachers,
   rejectTeacher,
+  sendAdminNotification,
   setAdminUserActive,
   setProfilePicture,
   setTeacherCv,
 } from '@/lib/api';
 import {
   TEACHER_STATUSES,
+  type Course,
   type Enrollment,
+  type Level,
   type StudentProfile,
   type TeacherProfile,
   type TeacherStatus,
@@ -71,6 +85,20 @@ function AdminDashboard() {
     phoneNumber: '',
     subject: '',
     bio: '',
+  });
+
+  // Notification form state
+  const [notifyRecipientId, setNotifyRecipientId] = useState('');
+  const [notifyMessage, setNotifyMessage] = useState('');
+
+  // Assign teacher modal state
+  const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
+  const [assignTeacherForm, setAssignTeacherForm] = useState({
+    studentId: '',
+    teacherId: '',
+    courseName: '' as Course,
+    confirmedLevel: '' as Level,
+    preferredTimeSlot: '',
   });
 
   const [loading, setLoading] = useState(true);
@@ -165,6 +193,47 @@ function AdminDashboard() {
     });
   }
 
+  async function handleSendNotification(e: React.FormEvent) {
+    e.preventDefault();
+    if (!notifyRecipientId.trim() || !notifyMessage.trim()) return;
+    await act('Notification sent.', async () => {
+      await sendAdminNotification(notifyRecipientId.trim(), notifyMessage.trim());
+      setNotifyRecipientId('');
+      setNotifyMessage('');
+    });
+  }
+
+  async function handleAssignTeacher(e: React.FormEvent) {
+    e.preventDefault();
+    if (
+      !assignTeacherForm.studentId.trim() ||
+      !assignTeacherForm.teacherId.trim() ||
+      !assignTeacherForm.courseName.trim() ||
+      !assignTeacherForm.confirmedLevel.trim() ||
+      !assignTeacherForm.preferredTimeSlot.trim()
+    )
+      return;
+    await act('Teacher assigned to student.', async () => {
+      await assignTeacherToStudent({
+        studentId: assignTeacherForm.studentId.trim(),
+        teacherId: assignTeacherForm.teacherId.trim(),
+        courseName: assignTeacherForm.courseName,
+        confirmedLevel: assignTeacherForm.confirmedLevel,
+        preferredTimeSlot: assignTeacherForm.preferredTimeSlot,
+      });
+      setShowAssignTeacherModal(false);
+      setAssignTeacherForm({
+        studentId: '',
+        teacherId: '',
+        courseName: '' as Course,
+        confirmedLevel: '' as Level,
+        preferredTimeSlot: '',
+      });
+      // Refresh data
+      await load(tab);
+    });
+  }
+
   async function changeAccountStatus(
     userId: string | undefined,
     name: string,
@@ -200,7 +269,20 @@ function AdminDashboard() {
   const pendingTeachersCount = teachers.filter(t => t.teacherStatus === 'PENDING').length;
 
   const teacherColumns: Column<TeacherProfile>[] = [
-    { key: 'name', header: 'Name', render: (t) => <div className="font-medium text-primary dark:text-ivory">{t.fullName}</div> },
+    {
+      key: 'name',
+      header: 'Name',
+      render: (t) => (
+        <div>
+          <div className="font-medium text-primary dark:text-ivory">{t.fullName}</div>
+          {t.user?.userIdNumber && (
+            <span className="font-mono text-xs font-semibold text-teal dark:text-gold">
+              ID: {t.user.userIdNumber}
+            </span>
+          )}
+        </div>
+      ),
+    },
     { key: 'email', header: 'Email', render: (t) => <div className="text-sm text-slate-500">{t.user?.email ?? '—'}</div> },
     { key: 'account', header: 'Account', render: (t) => <span className={t.user?.isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}>{t.user?.isActive ? 'Active' : 'Deactivated'}</span> },
     { key: 'phone', header: 'Phone', secondary: true, render: (t) => t.phoneNumber ?? '—' },
@@ -264,7 +346,20 @@ function AdminDashboard() {
   ];
 
   const studentColumns: Column<StudentProfile>[] = [
-    { key: 'name', header: 'Name', render: (s) => <div className="font-medium text-primary dark:text-ivory">{s.fullName}</div> },
+    {
+      key: 'name',
+      header: 'Name',
+      render: (s) => (
+        <div>
+          <div className="font-medium text-primary dark:text-ivory">{s.fullName}</div>
+          {s.user?.userIdNumber && (
+            <span className="font-mono text-xs font-semibold text-teal dark:text-gold">
+              ID: {s.user.userIdNumber}
+            </span>
+          )}
+        </div>
+      ),
+    },
     { key: 'email', header: 'Email', render: (s) => <div className="text-sm text-slate-500">{s.user?.email ?? '—'}</div> },
     { key: 'account', header: 'Account', render: (s) => <span className={s.user?.isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}>{s.user?.isActive ? 'Active' : 'Deactivated'}</span> },
     { key: 'joined', header: 'Joined', secondary: true, render: (s) => new Date(s.user?.createdAt ?? '').toLocaleDateString() },
@@ -427,6 +522,45 @@ function AdminDashboard() {
                 </Card>
               </div>
             </section>
+
+            <section>
+              <h2 className="mb-4 font-serif text-xl font-bold text-primary dark:text-gold">
+                Send Notification
+              </h2>
+              <Card>
+                <form onSubmit={handleSendNotification} className="space-y-4 max-w-xl">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+                      Recipient User ID(s) <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      value={notifyRecipientId}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotifyRecipientId(e.target.value)}
+                      placeholder='Single "0003" or multiple "0001,0002"'
+                      className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+                    />
+                    <p className="mt-1 text-xs text-slate-500 dark:text-gold-light/60">
+                      Target 4-digit User ID(s) or UUID(s), comma-separated.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+                      Message <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={notifyMessage}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotifyMessage(e.target.value)}
+                      rows={3}
+                      placeholder="Enter your notification message…"
+                      className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+                    />
+                  </div>
+                  <Button type="submit" variant="primary" disabled={busy || !notifyRecipientId.trim() || !notifyMessage.trim()}>
+                    <Mail className="h-4 w-4 mr-2" /> Send Notification
+                  </Button>
+                </form>
+              </Card>
+            </section>
           </div>
         )}
 
@@ -475,11 +609,23 @@ function AdminDashboard() {
 
         {tab === 'students' && (
           <Card>
-            <div className="mb-4">
-              <h2 className="m-0 font-serif text-lg font-semibold text-primary dark:text-gold">
-                Students
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">View and manage student profiles.</p>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="m-0 font-serif text-lg font-semibold text-primary dark:text-gold">
+                  Students
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">View and manage student profiles.</p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setShowAssignTeacherModal(true);
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <UserPlus className="h-4 w-4" /> Assign Teacher
+              </Button>
             </div>
 
             <DataTable
@@ -582,6 +728,88 @@ function AdminDashboard() {
               value={newTeacherForm.bio}
               onChange={(e) => setNewTeacherForm((f) => ({ ...f, bio: e.target.value }))}
               placeholder="Brief introduction about the teacher…"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Assign Teacher Modal */}
+      <Modal
+        open={showAssignTeacherModal}
+        onClose={() => setShowAssignTeacherModal(false)}
+        title="Assign Teacher to Student"
+        footer={
+          <>
+            <Button variant="ghost" type="button" onClick={() => setShowAssignTeacherModal(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form="assign-teacher-form" disabled={busy}>
+              {busy ? 'Assigning…' : 'Assign Teacher'}
+            </Button>
+          </>
+        }
+      >
+        <form id="assign-teacher-form" onSubmit={(e) => void handleAssignTeacher(e)} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Student ID <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={assignTeacherForm.studentId}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAssignTeacherForm((f) => ({ ...f, studentId: e.target.value }))}
+              placeholder="e.g. stu-123 or 4-digit ID"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Teacher ID <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={assignTeacherForm.teacherId}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAssignTeacherForm((f) => ({ ...f, teacherId: e.target.value }))}
+              placeholder="e.g. tch-456 or 4-digit ID"
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Course <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={assignTeacherForm.courseName}
+              onChange={(e) => setAssignTeacherForm((f) => ({ ...f, courseName: e.target.value as Course }))}
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            >
+              <option value="">Select a course</option>
+              <option value="LEARN_QURAN">LEARN_QURAN</option>
+              <option value="LEARN_ARABIC">LEARN_ARABIC</option>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Confirmed Level <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={assignTeacherForm.confirmedLevel}
+              onChange={(e) => setAssignTeacherForm((f) => ({ ...f, confirmedLevel: e.target.value as Level }))}
+              className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
+            >
+              <option value="">Select a level</option>
+              <option value="BEGINNER">BEGINNER</option>
+              <option value="INTERMEDIATE">INTERMEDIATE</option>
+              <option value="ADVANCED">ADVANCED</option>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
+              Preferred Time Slot <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={assignTeacherForm.preferredTimeSlot}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAssignTeacherForm((f) => ({ ...f, preferredTimeSlot: e.target.value }))}
+              placeholder="e.g. Mon/Wed 18:00"
               className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
             />
           </div>

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EnrollmentStatus, FeeStatus, Level, UserRole } from '@prisma/client';
 import { stripTeacherPrivacy } from '../common/privacy.js';
+import { getUserIdNumber } from '../common/user-id.util.js';
 import type { Pagination } from '../common/pagination.dto.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -144,12 +145,29 @@ export class EnrollmentsService {
 
     const teacher = await this.teachersService.getProfile(userId);
 
-    return this.prisma.enrollment.findMany({
+    const enrollments = await this.prisma.enrollment.findMany({
       where: { teacherId: teacher.id },
-      include: { student: { select: { id: true, fullName: true, whatsappNumber: true } } },
+      include: {
+        student: {
+          select: { id: true, userId: true, fullName: true, whatsappNumber: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       ...pagination,
     });
+
+    return Promise.all(
+      enrollments.map(async (e) => {
+        const studentUserIdNumber = await getUserIdNumber(this.prisma, e.student.userId);
+        return {
+          ...e,
+          student: {
+            ...e.student,
+            userIdNumber: studentUserIdNumber,
+          },
+        };
+      }),
+    );
   }
 
   async getById(userId: string, role: UserRole, enrollmentId: string) {

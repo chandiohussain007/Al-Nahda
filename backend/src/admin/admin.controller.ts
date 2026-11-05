@@ -23,6 +23,8 @@ import {
   ListTeachersQueryDto,
   CreateCourseDto,
   CreateTeacherDto,
+  SendAdminNotificationDto,
+  AssignTeacherToStudentDto,
   ResolveFeeDto,
   SetCvDto,
   SetProfilePictureDto,
@@ -38,6 +40,15 @@ import { AdminService } from './admin.service.js';
 @Controller('api/admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  @Post('notifications')
+  @ApiOperation({ summary: 'Send a notification to any user by 4-digit ID or UUID' })
+  sendNotification(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SendAdminNotificationDto,
+  ) {
+    return this.adminService.sendNotification(user.sub, dto);
+  }
 
   @Get('courses')
   @ApiOperation({ summary: 'List all courses, including drafts and archived courses' })
@@ -113,6 +124,16 @@ export class AdminController {
   @ApiOperation({ summary: 'Get a student profile with enrollments and evaluations' })
   getStudent(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.getStudent(id);
+  }
+
+  @Post('students/:studentId/assign-teacher')
+  @ApiOperation({ summary: 'Assign a teacher to a student and create an active enrollment' })
+  assignTeacherToStudent(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Body() dto: AssignTeacherToStudentDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.adminService.assignTeacherToStudent(studentId, dto, actor.sub);
   }
 
   @Get('enrollments')

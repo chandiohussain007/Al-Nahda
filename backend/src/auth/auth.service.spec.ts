@@ -67,6 +67,7 @@ describe('AuthService', () => {
       id: 'user-1',
       email: 'student@example.com',
       role: UserRole.STUDENT,
+      userIdNumber: '0000',
     });
   });
 });

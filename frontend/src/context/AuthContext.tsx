@@ -14,6 +14,7 @@ import { clearStoredUser, readStoredUser, writeStoredUser } from '../lib/session
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface SessionUser {
+  userIdNumber?: string;
   id: string;
   email: string;
   role: UserRole;
