@@ -806,10 +806,10 @@ function AdminDashboard() {
             <label className="mb-1 block text-sm font-medium text-charcoal dark:text-ivory">
               Preferred Time Slot <span className="text-red-500">*</span>
             </label>
-            <Input
+            <input
+              type="time"
               value={assignTeacherForm.preferredTimeSlot}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAssignTeacherForm((f) => ({ ...f, preferredTimeSlot: e.target.value }))}
-              placeholder="e.g. Mon/Wed 18:00"
               className="w-full rounded-lg border border-sandstone bg-surface px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-teal dark:border-gold/30 dark:bg-primary/60 dark:text-ivory"
             />
           </div>

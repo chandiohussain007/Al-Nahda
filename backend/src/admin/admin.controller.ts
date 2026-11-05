@@ -129,7 +129,7 @@ export class AdminController {
   @Post('students/:studentId/assign-teacher')
   @ApiOperation({ summary: 'Assign a teacher to a student and create an active enrollment' })
   assignTeacherToStudent(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentId') studentId: string,
     @Body() dto: AssignTeacherToStudentDto,
     @CurrentUser() actor: AuthenticatedUser,
   ) {
